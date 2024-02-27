@@ -3,7 +3,7 @@
 script_name("Hospital Helper")
 script_description('Cross-platform script helper for Medical Center')
 script_author("MTG MODS")
-script_version("3.0.2")
+script_version("3.0.3")
 
 require "lib.moonloader"
 require 'encoding'.default = 'CP1251'
