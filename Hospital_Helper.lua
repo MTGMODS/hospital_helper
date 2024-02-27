@@ -110,8 +110,7 @@ local default_settings = {
 		
 		{ cmd = 'gr' , description = 'Повышение/понижение игрока' , text = '/me достаёт из кармана свой телефон и заходит в базу данных {fraction_tag}&/me изменяет информацию о сотруднике {get_ru_nick({arg_id})} в базе данных {fraction_tag}&/me выходит с базы данных и убирает телефон обратно в карман&/giverank {arg_id} {arg2}&/r Сотрудник {get_ru_nick({arg_id})} получил новую должность!' , arg = '{arg_id} {arg2}', enable = true, waiting = '1.500' },
 	
-	},
-
+	}
 }
 
 local workingDirectory = getWorkingDirectory()
@@ -165,7 +164,7 @@ local function load_settings()
             deepmerge(loaded, settings)
             settings = loaded
         else
-			print('jsoncfg: failed to decode json, error:', loaded)
+			print('jsoncfg: failed to decode json, error: ', loaded)
             settings = default_settings
         end
     else
@@ -189,14 +188,14 @@ local function save_settings()
         if result then
             file:write(encoded)
         else
-            print('jsoncfg: failed to encode json, error:', encoded)
+            print('jsoncfg: failed to encode json, error: ', encoded)
         end
 
         file:close()
 
         return result
     else
-        print('jsoncfg: failed to open file, error:', errstr)
+        print('jsoncfg: failed to open file, error: ', errstr)
         return false
     end
 
@@ -206,11 +205,10 @@ if not doesDirectoryExist(configDirectory) then
     createDirectory(configDirectory)
 end
 
--- Load settings from file
 if doesFileExist(path) then
     load_settings()
 else
-    settings = deepcopy(default_settings)
+    settings = default_settings
     save_settings()
 end
 
