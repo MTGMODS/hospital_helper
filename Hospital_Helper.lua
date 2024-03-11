@@ -3,7 +3,7 @@
 script_name("Hospital Helper")
 script_description('Cross-platform script helper for Medical Center')
 script_author("MTG MODS")
-script_version("3.0.3")
+script_version("3.0.5")
 
 require "lib.moonloader"
 require 'encoding'.default = 'CP1251'
@@ -212,14 +212,11 @@ else
     save_settings()
 end
 
-
-
-local reset_settings_bool = false
+local reload_script = false
 
 if tostring(settings.general.version) ~= tostring(thisScript().version) then
 	
-end	
-
+end
 --------------------------------------------------------------------------------------------------------------
 function isMonetLoader() return MONET_VERSION ~= nil end
 if MONET_DPI_SCALE == nil then MONET_DPI_SCALE = 1.0 end
@@ -258,6 +255,7 @@ else
 end
 --------------------------------------------------------------------------------------------------------------
 local sampev = require "samp.events"
+
 local ffi = require 'ffi'
 
 local imgui = require('mimgui')
@@ -325,7 +323,7 @@ local FastMenuPlayers = new.bool()
 local FastHealMenu = new.bool()
 local heal_in_chat = false
 local heal_in_chat_player_id = nil
-local world_heal_in_chat = { 'вылечите', 'вылечи', 'похиль', 'хил', 'хилл', 'лек', 'лекни', 'heal ', 'hil', 'lek', 'lekni' }
+local world_heal_in_chat = { 'вылечите', 'вылечи', 'похиль', 'хил', 'хилл', 'лек', 'лекни', 'heal', 'hil', 'lek' }
 
 local MedOsmotrMenu1, MedOsmotrMenu2, MedOsmotrMenu3, MedOsmotrMenu4, MedOsmotrMenu5 = new.bool(), new.bool(), new.bool(), new.bool(), new.bool()
 local medosmtype = new.int()
@@ -678,7 +676,7 @@ function medosm(id)
 			sampSendChat("Сейчас я проведу Вам мед.осмотр, дайте мне вашу мед.карту для проверки.")
 			medcheck = true
 			MedOsmotrMenu2[0] = true
-			wait(get_my_wait())
+			wait(1500)
 			sampSendChat("/n "..sampGetPlayerNickname(player_id)..", введите /showmc "..select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)).." чтоб показать мне мед.карту.")
 		end)
 	else
@@ -690,13 +688,13 @@ function medcard(id)
 	if isParamID(id) then
 		lua_thread.create(function()
 			sampSendChat("Для оформления мед. карты Вам необходимо оплатить определенную сумму.")
-			wait(get_my_wait())
+			wait(1500)
 			sampSendChat("Эта сумма зависит от строка действия будущей медкарты.")
-			wait(get_my_wait())
+			wait(1500)
 			sampSendChat("Мед. карта на 7 дней - $"..settings.price.med7..", на 14 дней - $"..settings.price.med14..".")
-			wait(get_my_wait())
+			wait(1500)
 			sampSendChat("Мед. карта на 30 дней - $"..settings.price.med30..", на 60 дней - $"..settings.price.med60..".")
-			wait(get_my_wait())
+			wait(1500)
 			sampSendChat("Скажите, на какой срок Вам оформить мед. карту?")
 			player_id = tonumber(id)
 			MedCardMenu[0] = true
@@ -710,9 +708,9 @@ function recept(id)
 	if isParamID(id) then
 		lua_thread.create(function()
 			sampSendChat("Хорошо, стоимость одного рецепта составляет $"..settings.price.recept..".")
-			wait(get_my_wait())
+			wait(1500)
 			sampSendChat("Скажите сколько Вам требуется рецептов, после чего мы продолжим.")
-			wait(get_my_wait())
+			wait(1500)
 			sampSendChat("/n Внимание! В течении часа выдаётся максимум 5 рецептов!")
 			player_id = tonumber(id)
 			ReceptMenu[0] = true
@@ -726,9 +724,9 @@ function antibiotik(id)
 	if isParamID(id) then
 		lua_thread.create(function()
 			sampSendChat("Хорошо, cтоимость одного антибиотика составляет $"..settings.price.ant..".")
-			wait(get_my_wait())
+			wait(1500)
 			sampSendChat("Скажите сколько Вам требуется антибиотиков, после чего мы продолжим.")
-			wait(get_my_wait())
+			wait(1500)
 			sampSendChat("/n Внимание! Вы можете купить от 1 до 20 антибитиков!")
 			player_id = tonumber(id)
 			AntibiotikMenu[0] = true
@@ -773,9 +771,9 @@ function vc_vize(id)
 		if isParamID(id) then
 			lua_thread.create(function()
 				sampSendChat("/me достаёт из кармана свой телефон и заходит в базу данных " .. settings.player_info.fraction_tag)
-				wait(get_my_wait())
+				wait(1500)
 				sampSendChat("/me изменяет информацию о сотруднике " .. TranslateNick(sampGetPlayerNickname(tonumber(id))) .. " и убирает телефон обратно в карман")
-				wait(get_my_wait())
+				wait(1500)
 				vc_vize_player_id = tonumber(id)
 				vc_vize_bool = true
 				sampSendChat("/lmenu")
@@ -783,9 +781,9 @@ function vc_vize(id)
 		elseif id:find('^(%w+_%w+)') then
 			lua_thread.create(function()
 				sampSendChat("/me достаёт из кармана свой телефон и заходит в базу данных " .. settings.player_info.fraction_tag)
-				wait(get_my_wait())
+				wait(1500)
 				sampSendChat("/me изменяет информацию о сотруднике " .. TranslateNick(id) .." и убирает телефон обратно в карман")
-				wait(get_my_wait())
+				wait(1500)
 				if sampIsConnectedByNick(id) then
 					vc_vize_player_id = tonumber(sampGetIDByNick(id))
 					vc_vize_bool = true
@@ -1292,7 +1290,7 @@ function isParamID(id)
 
 end
 function get_my_wait()
-	return settings.waiting.my_wait * 1000
+	return 1500
 	
 end
 function play_error_sound()
@@ -2447,7 +2445,7 @@ local MainWindow = imgui.OnFrame(
 
 					table.insert(settings.note, new_note)
 					
-					save(settings,path)
+					save_settings()
 					
 				end
 							
@@ -2544,7 +2542,7 @@ local MainWindow = imgui.OnFrame(
 
 					if monet_check_errors then
 
-						if imgui.RadioButtonIntPtr(u8" MoonMonet Theme (настраиваемый цвет) ", theme, 1) then
+						if imgui.RadioButtonIntPtr(u8" MoonMonet Theme ", theme, 1) then
 						
 							
 							theme[0] = 1
@@ -2567,7 +2565,7 @@ local MainWindow = imgui.OnFrame(
 						
 						imgui.SameLine()
 
-						if imgui.ColorEdit3('## COLOR', mmcolor, imgui.ColorEditFlags.NoInputs) then
+						if theme[0] == 1 and imgui.ColorEdit3('## COLOR', mmcolor, imgui.ColorEditFlags.NoInputs) then
 						
 							local r,g,b = mmcolor[0] * 255, mmcolor[1] * 255, mmcolor[2] * 255
 							local argb = join_argb(0, r, g, b)
@@ -2593,7 +2591,7 @@ local MainWindow = imgui.OnFrame(
 					
 					else
 					
-						if imgui.RadioButtonIntPtr(u8" MoonMonet Theme : "..fa.TRIANGLE_EXCLAMATION .. u8' Ошибка MoonMonet Lib, используйте Dark Theme', theme, 1) then
+						if imgui.RadioButtonIntPtr(u8" MoonMonet Theme "..fa.TRIANGLE_EXCLAMATION .. u8' Ошибка Lib, используйте Dark Theme', theme, 1) then
 							theme[0] = 0
 						end
 						
@@ -2626,9 +2624,9 @@ local MainWindow = imgui.OnFrame(
 						
 						if imgui.Button(u8'Да, сбросить', imgui.ImVec2(100 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
 							settings = default_settings
-							save(settings,path)
+							save_settings()
 							imgui.CloseCurrentPopup()
-							reset_settings_bool = true
+							reload_script = true
 							thisScript():reload()
 						end
 						
@@ -3979,7 +3977,7 @@ end
 
 function onScriptTerminate(script, game_quit)
 
-    if script == thisScript() and not game_quit and not reset_settings_bool then
+    if script == thisScript() and not game_quit and not reload_script then
 		
 		sampAddChatMessage('[Hospital Helper] {ffffff}Произошла неизвестная ошибка, хелпер приостановил свою работу!', message_color)
 		
