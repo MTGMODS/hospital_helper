@@ -3,36 +3,36 @@
 script_name("Hospital Helper")
 script_description('Cross-platform script helper for Medical Center')
 script_author("MTG MODS")
-script_version("3.0.5")
+script_version("3.1 Beta")
+script_properties("work-in-pause")
 
-require "lib.moonloader"
-require 'encoding'.default = 'CP1251'
-local u8 = require 'encoding'.UTF8
+require('lib.moonloader')
+require ('encoding').default = 'CP1251'
+local u8 = require('encoding').UTF8
+local ffi = require('ffi')
+local sampev = require('samp.events')
 
------------------------------------------------ПОДКЛЮЧЕНИЕ JSON-----------------------------------------------
+-------------------------------------------- JSON SETTINGS ---------------------------------------------
+
 local settings = {}
-
 local default_settings = {
-
 	general = {
-		
 		version = thisScript().version,
-		
 		expel_reason = 'Н.П.Б.',
-		
 		accent_enable = true,
-		anti_trivoga = false,
+		anti_trivoga = true,
 		heal_in_chat = false,
 		auto_uval = false,
 		rp_chat = true,
-		
 		moonmonet_theme_enable = true,
 		moonmonet_theme_color = 16742777,
-		
+		bind_mainmenu = '[113]',
+		bind_fastmenu = '[69]',
+		bind_leader_fastmenu = '[71]',
+		bind_healme = '[114]',
+		bind_fastheal = '[13]',
 	},
-	
 	player_info = {
-	
 		name_surname = '',
 		accent = '[Иностранный акцент]:',
 		fraction = 'Не имеется',
@@ -40,26 +40,22 @@ local default_settings = {
 		fraction_rank = 'Неизвестно',
 		fraction_rank_number = 0,
 		sex = 'Неизвестно',
-	
 	},
-	
 	price = {
-		heal = 15000,
-		heal_vc = 50,
-		healbad = 300000,
-		healactor = 300000,
+		ant = 50000,
+		recept = 50000,
+		heal = 20000,
+		heal_vc = 100,
+		healactor = 400000,
 		healactor_vc = 1000,
-		medosm = 300000,
-		ant = 25000,
-		recept = 5000,
-		tatu = 300000,
-		med7 = 30000,
-		med14 = 50000,
-		med30 = 70000,
-		med60 = 110000,
-		mticket = 300000,
+		medosm = 400000,
+		mticket = 3400000,
+		tatu = 400000,
+		med7 = 50000,
+		med14 = 100000,
+		med30 = 150000,
+		med60 = 200000,
 	},
-	
 	note = {
 		
 		{ note_name = 'Заметка №1', note_text = 'Вы можете указывать у себя в заметках абсолюто любую информацию!&Ваши заметки будут сохранены и доступны в любое время!' },
@@ -67,7 +63,6 @@ local default_settings = {
 		
 		
 	},
-	
 	commands = {
 	
 		{ cmd = 'zd' , description = 'Привествие игрока' , text = 'Здраствуйте, я {my_ru_nick} - {fraction_rank} {fraction_tag}.&Чем я могу вам помочь?', arg = '' , enable = true , waiting = '1.500'  },
@@ -97,7 +92,6 @@ local default_settings = {
 		{ cmd = 'pilot' , description = 'Мед.осмотр для пилотов' ,  text = 'Хорошо, сейчас я проведу вам мед.осмотр для пилотов.&/medcheck {arg_id} {price_medosm}&/n {get_nick({arg_id})}, примите предложение в /offer для продолжения мед.осмотра!&/n Пока вы не примите предложение, мы не сможем начать!&/me достаёт из мед.кейса стерильные перчатки и надевает их на руки&/do Перчатки на руках.&/todo Начнём мед.осмотр*улыбаясь.&Сейчас я проверю ваше горло, откройте рот и высуните язык.&/me достаёт из мед.кейса фонарик и включив его осматривает горло человека напротив&Хорошо, можете закрывать рот, сейчас я проверю ваши глаза.&/me проверяет реакцию человека на свет, посветив фонарик в глаза&/do Зрачки глаз обследуемого человека сузились.&/todo Отлично*выключая фонарик и убирая его в мед.кейс&Такс, сейчас я проверю ваше сердцебиение, поэтому приподнимите верхную одежду!&/me достаёт из мед.кейса стетоскоп и приложив его к груди человека проверяет сердцебиение&/do Сердцебиение в районе 65 ударов в минуту.&/todo С сердцебиением у вас все в порядке*убирая стетоскоп обратно в мед.кейс&/me снимает со своих рук использованные перчатки и выбрасывает их&Ну что-ж я могу вам сказать, со здоровьем у вас все в порядке, вы свободны!' , arg = '{arg_id}' , enable = true, waiting = '1.500'  },
 	
 	},
-
 	commands_manage = {
 	
 		{ cmd = 'inv' , description = 'Принятие игрока в фракцию' , text = '/do В кармане халата есть связка с ключами от раздевалки.&/me достаёт из халата один ключ из связки ключей от раздевалки&/todo Возьмите, это ключ от нашей раздевалки*передавая ключ человеку напротив&/invite {arg_id}' , arg = '{arg_id}', enable = true, waiting = '1.500'  },
@@ -112,185 +106,112 @@ local default_settings = {
 	
 	}
 }
-
-local workingDirectory = getWorkingDirectory()
-local configDirectory = workingDirectory .. "/config"
+local configDirectory = getWorkingDirectory() .. "/config"
 local path = configDirectory .. "/Hospital_Helper_Settings.json"
-
-local function deepcopy(o, seen)
-    seen = seen or {}
-    if o == nil then return nil end
-    if seen[o] then return seen[o] end
-
-    local no
-    if type(o) == 'table' then
-        no = {}
-        seen[o] = no
-
-        for k, v in pairs(o) do
-            no[deepcopy(k, seen)] = deepcopy(v, seen)
-        end
-        setmetatable(no, deepcopy(getmetatable(o), seen))
+function load_settings()
+    if not doesDirectoryExist(configDirectory) then
+        createDirectory(configDirectory)
+    end
+    if not doesFileExist(path) then
+        settings = default_settings
+		print('[Hospital Helper] Файл с настройками не найден, использую стандартные настройки!')
+        save_settings()
     else
-        no = o
-    end
-    return no
-end
+        local file = io.open(path, 'r')
+        if file then
+            local contents = file:read('*a')
+            file:close()
+			if #contents == 0 then
+				settings = default_settings
+				print('[Hospital Helper] Не удалось открыть файл с настройками, использую стандартные настройки!')
+			else
+				local result, loaded = pcall(decodeJson, contents)
+				if result then
+					settings = loaded
+					for category, _ in pairs(default_settings) do
+						settings[category] = settings[category] or {}
+						for key, value in pairs(default_settings[category]) do
+							settings[category][key] = settings[category][key] or value
+						end
+					end
+					print('[Hospital Helper] Настройки успешно загружены!')
 
-local function deepmerge(a, b)
-    for k, v in pairs(b) do
-        if a[k] == nil then
-            a[deepcopy(k)] = deepcopy(v)
+				else
+					print('[Hospital Helper] Не удалось открыть файл с настройками, использую стандартные настройки!')
+				end
+			end
         else
-            deepmerge(a[k], v)
-        end
-    end
-end
-
-local function load_settings()
-    local file = io.open(path, 'r')
-
-    if file then
-        local contents = file:read('*a')
-        file:close()
-
-        if #contents == 0 then
-           	settings = default_settings
-        end
-
-		local result, loaded = pcall(decodeJson, contents)
-
-        if result and type(loaded) == 'table' then
-            deepmerge(loaded, settings)
-            settings = loaded
-        else
-			print('jsoncfg: failed to decode json, error: ', loaded)
             settings = default_settings
-        end
-    else
-		settings = default_settings
-    end
-
-    for category, _ in pairs(default_settings) do
-        settings[category] = settings[category] or {}
-        for key, value in pairs(default_settings[category]) do
-            settings[category][key] = settings[category][key] or value
+			print('[Hospital Helper] Не удалось открыть файл с настройками, использую стандартные настройки!')
+			save_settings()
         end
     end
 end
-
-local function save_settings()
+function save_settings()
     local file, errstr = io.open(path, 'w')
-
-	if file then
+    if file then
         local result, encoded = pcall(encodeJson, settings)
-
-        if result then
-            file:write(encoded)
-        else
-            print('jsoncfg: failed to encode json, error: ', encoded)
-        end
-
+        file:write(result and encoded or "")
         file:close()
-
+		print('[Hospital Helper] Настройки сохранены!')
         return result
     else
-        print('jsoncfg: failed to open file, error: ', errstr)
+        print('[Hospital Helper] Не удалось сохранить настройки хелпера, ошибка: ', errstr)
         return false
     end
+end
+load_settings()
 
+if tostring(settings.general.version) ~= tostring(thisScript().version) then 
+	print('[Hospital Helper] Обнаружена иная версия хелпера от той что у вас была раньше!') 
+	print('[Hospital Helper] Рекомендуеться сделать сброс настроек хелпера!') 
+	settings.general.version = thisScript().version
+	save_settings()
 end
 
-if not doesDirectoryExist(configDirectory) then
-    createDirectory(configDirectory)
-end
+------------------------------------------- MonetLoader --------------------------------------------------
 
-if doesFileExist(path) then
-    load_settings()
-else
-    settings = default_settings
-    save_settings()
-end
-
-local reload_script = false
-
-if tostring(settings.general.version) ~= tostring(thisScript().version) then
-	
-end
---------------------------------------------------------------------------------------------------------------
 function isMonetLoader() return MONET_VERSION ~= nil end
-if MONET_DPI_SCALE == nil then MONET_DPI_SCALE = 1.0 end
 
 if isMonetLoader() then
-
-	local ffi = require('ffi')
-	local gta = ffi.load('GTASA')
-	ffi.cdef[[
-		void _Z12AND_OpenLinkPKc(const char* link);
-	]]
-	
+	gta = ffi.load('GTASA') 
+	ffi.cdef[[ void _Z12AND_OpenLinkPKc(const char* link); ]] -- функция для открытия ссылок
 end
 
-local monet_check_errors, monet = pcall(require, 'MoonMonet')
+if not isMonetLoader() and MONET_DPI_SCALE == nil then MONET_DPI_SCALE = 1.0 end
 
-local message_color 
-local message_color_hex 
-
-if settings.general.moonmonet_theme_enable and monet_check_errors then
-
-	function rgbToHex(rgb)
-		local r = bit.band(bit.rshift(rgb, 16), 0xFF)
-		local g = bit.band(bit.rshift(rgb, 8), 0xFF)
-		local b = bit.band(rgb, 0xFF)
-		
-		local hex = string.format("%02X%02X%02X", r, g, b)
-		return hex
-	end
-
-	message_color = settings.general.moonmonet_theme_color
-	message_color_hex = '{' ..  rgbToHex(settings.general.moonmonet_theme_color) .. '}'
-else
-	message_color_hex = '{FF7E7E}'
-	message_color = 0xFF7E7E
-end
---------------------------------------------------------------------------------------------------------------
-local sampev = require "samp.events"
-
-local ffi = require 'ffi'
+---------------------------------------------- Mimgui -----------------------------------------------------
 
 local imgui = require('mimgui')
 local fa = require('fAwesome6_solid')
 
 local sizeX, sizeY = getScreenResolution()
-local new = imgui.new
-local MainWindow = new.bool()
-local checkbox_accent_enable = new.bool(settings.general.accent_enable)
-local input_expel_reason = new.char[256](u8(settings.general.expel_reason))
-local input_accent = new.char[256](u8(settings.player_info.accent))
-local input_name_surname = new.char[256](u8(settings.player_info.name_surname))
-local input_fraction_tag = new.char[256](u8(settings.player_info.fraction_tag))
-local input_heal = new.char[256](u8(settings.price.heal))
-local input_heal_vc = new.char[256](u8(settings.price.heal_vc))
-local input_healbad = new.char[256](u8(settings.price.healbad))
-local input_healactor = new.char[256](u8(settings.price.healactor))
-local input_healactor_vc = new.char[256](u8(settings.price.healactor_vc))
-local input_medosm = new.char[256](u8(settings.price.medosm))
-local input_mticket = new.char[256](u8(settings.price.mticket))
-local input_recept = new.char[256](u8(settings.price.recept))
-local input_ant = new.char[256](u8(settings.price.ant))
-local input_tatu = new.char[256](u8(settings.price.tatu))
-local input_med7 = new.char[256](u8(settings.price.med7))
-local input_med14 = new.char[256](u8(settings.price.med14))
-local input_med30 = new.char[256](u8(settings.price.med30))
-local input_med60 = new.char[256](u8(settings.price.med60))
-local slider = new.float(0)
-local theme = new.int(0)
-if settings.general.moonmonet_theme_enable and monet_check_errors then theme[0] = 1 end
-local tmp = imgui.ColorConvertU32ToFloat4(settings.general.moonmonet_theme_color)
-local mmcolor = new.float[3](tmp.z, tmp.y, tmp.x)
 
-local BinderWindow = new.bool()
-local ComboTags = new.int()
+local MainWindow = imgui.new.bool()
+local checkbox_accent_enable = imgui.new.bool(settings.general.accent_enable)
+local input_expel_reason = imgui.new.char[256](u8(settings.general.expel_reason))
+local input_accent = imgui.new.char[256](u8(settings.player_info.accent))
+local input_name_surname = imgui.new.char[256](u8(settings.player_info.name_surname))
+local input_fraction_tag = imgui.new.char[256](u8(settings.player_info.fraction_tag))
+local input_heal = imgui.new.char[256](u8(settings.price.heal))
+local input_heal_vc = imgui.new.char[256](u8(settings.price.heal_vc))
+local input_healactor = imgui.new.char[256](u8(settings.price.healactor))
+local input_healactor_vc = imgui.new.char[256](u8(settings.price.healactor_vc))
+local input_medosm = imgui.new.char[256](u8(settings.price.medosm))
+local input_mticket = imgui.new.char[256](u8(settings.price.mticket))
+local input_recept = imgui.new.char[256](u8(settings.price.recept))
+local input_ant = imgui.new.char[256](u8(settings.price.ant))
+local input_tatu = imgui.new.char[256](u8(settings.price.tatu))
+local input_med7 = imgui.new.char[256](u8(settings.price.med7))
+local input_med14 = imgui.new.char[256](u8(settings.price.med14))
+local input_med30 = imgui.new.char[256](u8(settings.price.med30))
+local input_med60 = imgui.new.char[256](u8(settings.price.med60))
+local theme = imgui.new.int(0)
+if settings.general.moonmonet_theme_enable and monet_no_errors then theme[0] = 1 end
+
+local BinderWindow = imgui.new.bool()
+local waiting_slider = imgui.new.float(0)
+local ComboTags = imgui.new.int()
 local item_list = {u8'Без аргумента', u8'{arg} - принимает что угодно, буквы/цифры/символы', u8'{arg_id} - принимает только ID игрока', u8'{arg_id} {arg2} - принимает 2 аругмента: ID игрока и второе что угодно'}
 local ImItems = imgui.new['const char*'][#item_list](item_list)
 local change_cmd_bool = false
@@ -299,64 +220,15 @@ local change_description = ''
 local change_text = ''
 local change_arg = ''
 local binder_create_command_9_10 = false
-
-local MembersWindow = new.bool()
-local members = {}
-local members_new = {}
-local members_check = false
-local members_fraction = ''
-local update_members_check = false
-
-local MedCardMenu = new.bool()
-local medcard_days = new.int()
-
-local ReceptMenu = new.bool()
-local recepts = new.int()
-
-local AntibiotikMenu = new.bool()
-local antibiotiks = new.int(1)
-
-local FastMenu = new.bool()
-local FastMenuButton = new.bool()
-local FastMenuPlayers = new.bool()
-
-local FastHealMenu = new.bool()
-local heal_in_chat = false
-local heal_in_chat_player_id = nil
-local world_heal_in_chat = { 'вылечите', 'вылечи', 'похиль', 'хил', 'хилл', 'лек', 'лекни', 'heal', 'hil', 'lek' }
-
-local MedOsmotrMenu1, MedOsmotrMenu2, MedOsmotrMenu3, MedOsmotrMenu4, MedOsmotrMenu5 = new.bool(), new.bool(), new.bool(), new.bool(), new.bool()
-local medosmtype = new.int()
-local medcheck = false
-local medcheck_no_medcard = false
-local medcard_narko = 0
-local medcard_status = ''
-
-local PlayerID = nil
-local player_id = 0
-local check_stats = false
-local anti_flood_auto_uval = false
-local spawncar_bool = false
-
-local vc_vize_bool = false
-local vc_vize_player_id = 0
-local godeath_player_id = 0
-local godeath_locate = ''
-local godeath_city = ''
-
 local tagReplacements = {
-
 	my_id = function() return select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)) end,
     my_nick = function() return sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))) end,
 	my_ru_nick = function() return TranslateNick(settings.player_info.name_surname) end,
-	
 	fraction_rank_number = function() return settings.player_info.fraction_rank_number end,
 	fraction_rank = function() return settings.player_info.fraction_rank end,
 	fraction_tag = function() return settings.player_info.fraction_tag end,
 	fraction = function() return settings.player_info.fraction end,
-	
 	expel_reason = function() return settings.general.expel_reason end,
-	
 	price_heal = function()
 		if u8(sampGetCurrentServerName()):find("Vice City") then
 			return settings.price.heal_vc
@@ -380,7 +252,6 @@ local tagReplacements = {
 	price_med14 = function() return settings.price.med14 end,
 	price_med30 = function() return settings.price.med30 end,
 	price_med60 = function() return settings.price.med60 end,
-	
 	sex = function() 
 		if settings.player_info.sex == 'Женщина' then
 			local temp = 'а'
@@ -392,41 +263,203 @@ local tagReplacements = {
 	end,
 	
 }
+local binder_tags_text = [[
+{my_id} - Ваш игровой ID
+{my_nick} - Ваш игровой Nick
+{my_ru_nick} - Ваше Имя и Фамилия указанные в хелпере
+{fraction} - Ваша фракция указанная в хелпере
+{fraction_tag} - Ваш фракционнфый тэг указанный в хелпере
+{fraction_rank} - Название вашего фракционного ранга в хелпере
+{expel_reason} - Причина для выгона из хелпера
+{price_heal} - Цена лечения пациентов
+{price_actorheal} - Цена лечения охранников
+{price_medosm} - Цена мед.осмотра для пилота
+{price_tatu} - Цена удаления татуировки
+{price_mticket} - Цена обследования военного билета
+{price_ant} - Цена антибиотика
+{price_recept} - Цена рецепта
+{price_med7} - Цена медккарты на 7 дней
+{price_med14} - Цена медккарты на 14 дней
+{price_med30} - Цена медккарты на 30 дней
+{price_med60} - Цена медккарты на 60 дней
+
+{sex} - Добавляет букву "а" если в хелпере указан женский пол
+
+{get_nick({arg_id})} - получить Nick игрока из аргумента ID игрока
+{get_rp_nick({arg_id})}  - получить Nick игрока без символа _ из аргумента ID игрока
+{get_ru_nick({arg_id})}  - получить Nick игрока на кирилице из аргумента ID игрока 
+]]
+
+local MembersWindow = imgui.new.bool()
+local members = {}
+local members_new = {}
+local members_check = false
+local members_fraction = ''
+local update_members_check = false
+function update_members()
+	lua_thread.create(function()
+		update_members_check = true
+		wait(1500)
+		if MembersWindow[0] then
+			members_new = {} 
+			members_check = true 
+			sampSendChat("/members") 
+		end
+		wait(1500)
+		update_members_check = false
+	end)
+end
+
+local MedCardMenu = imgui.new.bool()
+local medcard_days = imgui.new.int()
+
+local ReceptMenu = imgui.new.bool()
+local recepts = imgui.new.int()
+
+local AntibiotikMenu = imgui.new.bool()
+local antibiotiks = imgui.new.int(1)
+
+local LeaderFastMenu = imgui.new.bool()
+local FastMenu = imgui.new.bool()
+local FastMenuButton = imgui.new.bool()
+local FastMenuPlayers = imgui.new.bool()
+
+local FastHealMenu = imgui.new.bool()
+local heal_in_chat = false
+local heal_in_chat_player_id = nil
+local world_heal_in_chat = { 'вылечите', 'вылечи', 'похиль', ' хил ', 'хилл', ' лек', 'лекни', 'heal', 'hil', 'lek' }
+
+local MedOsmotrMenu1, MedOsmotrMenu2, MedOsmotrMenu3, MedOsmotrMenu4, MedOsmotrMenu5 = imgui.new.bool(), imgui.new.bool(), imgui.new.bool(), imgui.new.bool(), imgui.new.bool()
+local medosmtype = imgui.new.int()
+local medcheck = false
+local medcheck_no_medcard = false
+local medcard_narko = 0
+local medcard_status = ''
+
+local NoteWindow = imgui.new.bool()
+local show_note_name = ''
+local show_note_text = ''
+
+-------------------------------------------- MoonMonet ----------------------------------------------------
+
+local monet_no_errors, moon_monet = pcall(require, 'MoonMonet') -- безопасно подключаем библиотеку
+
+local message_color 
+local message_color_hex 
+
+if settings.general.moonmonet_theme_enable and monet_no_errors then
+	function rgbToHex(rgb)
+		local r = bit.band(bit.rshift(rgb, 16), 0xFF)
+		local g = bit.band(bit.rshift(rgb, 8), 0xFF)
+		local b = bit.band(rgb, 0xFF)
+		local hex = string.format("%02X%02X%02X", r, g, b)
+		return hex
+	end
+	message_color = settings.general.moonmonet_theme_color
+	message_color_hex = '{' ..  rgbToHex(settings.general.moonmonet_theme_color) .. '}'
+else
+	message_color_hex = '{FF7E7E}'
+	message_color = 0xFF7E7E
+end
+
+local tmp = imgui.ColorConvertU32ToFloat4(settings.general.moonmonet_theme_color)
+local mmcolor = imgui.new.float[3](tmp.z, tmp.y, tmp.x)
+
+------------------------------------------- Mimgui Hotkey  -----------------------------------------------------
+
+if not isMonetLoader() then
+	
+	hotkey = require('mimgui_hotkeys')
+	hotkey.Text.NoKey = u8'< Бинд не установлен >'
+    hotkey.Text.WaitForKey = u8'< Ожидание выбора клавиш >'
+
+	MainMenuHotKey = hotkey.RegisterHotKey('Open MainMenu', false, decodeJson(settings.general.bind_mainmenu), function() end)
+	FastMenuHotKey = hotkey.RegisterHotKey('Open FastMenu', false, decodeJson(settings.general.bind_fastmenu), function() end)
+	LeaderFastMenuHotKey = hotkey.RegisterHotKey('Open LeaderFastMenu', false, decodeJson(settings.general.bind_leader_fastmenu), function() end)
+	HealMeHotKey = hotkey.RegisterHotKey('Healme', false, decodeJson(settings.general.bind_healme), function() end)
+	FastHealHotKey = hotkey.RegisterHotKey('FastHeal Player', false, decodeJson(settings.general.bind_fastheal), function() end)
+
+    
+	function IsHotkeyClicked(keys_id)
+		local keysArray = decodeJson(keys_id)
+		if next(keysArray) == nil then
+			return false
+		end
+		local allKeysPressed = true
+		for _, element in ipairs(keysArray) do
+			if not isKeyDown(element) then
+				allKeysPressed = false
+				break
+			end
+		end
+		return allKeysPressed
+	end
+	function getNameKeysFrom(keys)
+		local keys = decodeJson(keys)
+		local keysStr = {}
+		for _, keyId in ipairs(keys) do
+			local keyName = require('vkeys').id_to_name(keyId) or ''
+			table.insert(keysStr, keyName)
+		end
+		return tostring(table.concat(keysStr, ' + '))
+	end
+
+end
+
+------------------------------------------------- Other --------------------------------------------------------
+
+local PlayerID = nil
+local player_id = 0
+local check_stats = false
+local anti_flood_auto_uval = false
+local spawncar_bool = false
+
+local vc_vize_bool = false
+local vc_vize_player_id = 0
+local godeath_player_id = 0
+local godeath_locate = ''
+local godeath_city = ''
+
+local clicked = false
+
+------------------------------------------- Main -----------------------------------------------------
 
 function main()
 
 	if not isSampLoaded() or not isSampfuncsLoaded() then return end
     while not isSampAvailable() do wait(0) end 
-	
+
 	if not sampIsLocalPlayerSpawned() then 
 		sampAddChatMessage('[Hospital Helper] {ffffff}Инициализация хелпера прошла успешно!',message_color)
 		sampAddChatMessage('[Hospital Helper] {ffffff}Для полной загрузки хелпера сначало заспавнитесь (войдите на сервер)',message_color)
-		repeat wait(0) until sampIsLocalPlayerSpawned()
 	end
+
+	repeat wait(0) until sampIsLocalPlayerSpawned()
 	
 	sampAddChatMessage('[Hospital Helper] {ffffff}Загрузка хелпера прошла успешно!', message_color)
-	sampAddChatMessage('[Hospital Helper] {ffffff}Чтоб открыть меню хелпера ' .. (isMonetLoader() and 'введите команду ' .. message_color_hex .. '/hh' or 'нажмите клавишу ' .. message_color_hex .. 'F2 {ffffff}или введите команду ' .. message_color_hex .. '/hh'), message_color)
+	if isMonetLoader() or settings.general.bind_mainmenu == nil then
+		sampAddChatMessage('[Hospital Helper] {ffffff}Чтоб открыть меню хелпера введите команду ' .. message_color_hex .. '/hh', message_color)
+	else
+		sampAddChatMessage('[Hospital Helper] {ffffff}Чтоб открыть меню хелпера нажмите ' .. message_color_hex .. getNameKeysFrom(settings.general.bind_mainmenu) .. ' {ffffff}или введите команду ' .. message_color_hex .. '/hh', message_color)
+	end
 	
 	if settings.player_info.name_surname == '' then
 		settings.player_info.name_surname = TranslateNick(sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))))
-		input_name_surname = new.char[256](u8(settings.player_info.name_surname))
-		
+		input_name_surname = imgui.new.char[256](u8(settings.player_info.name_surname))
 		check_stats = true
 		sampSendChat('/stats')
 	end
 
 	sampRegisterChatCommand("hh", function() MainWindow[0] = not MainWindow[0]  end)
 	sampRegisterChatCommand("hm", show_fast_menu)
-	sampRegisterChatCommand("mb", function() members_new = {} members_check = true sampSendChat("/members")  end)
+	if not isMonetLoader() then sampRegisterChatCommand("hlm", show_leader_fast_menu) end
+	sampRegisterChatCommand("mb", function() members_new = {} members_check = true sampSendChat("/members") end)
 	sampRegisterChatCommand("osm",medosm)
 	sampRegisterChatCommand("spawncar",spawncar)
 	sampRegisterChatCommand("vc",vc_vize)
-	sampRegisterChatCommand("rec",recept)
 	sampRegisterChatCommand("recept",recept)
 	sampRegisterChatCommand("ant",antibiotik)
-	sampRegisterChatCommand("antibiotik",antibiotik)
 	sampRegisterChatCommand("mc",medcard)
-	sampRegisterChatCommand("medcard",medcard)
 	
 	registerCommandsFrom(settings.commands)
 	if tonumber(settings.player_info.fraction_rank_number) >= 9 then registerCommandsFrom(settings.commands_manage) end
@@ -447,16 +480,17 @@ function main()
 		if not isMonetLoader() then
 		
 			if heal_in_chat and isKeyDown(VK_RETURN) and not sampIsDialogActive() and not sampIsChatInputActive() and not isPauseMenuActive() and not isSampfuncsConsoleActive() then
-			    command("/heal {arg_id}",heal_in_chat_player_id)
+			    command("/heal {arg_id}", heal_in_chat_player_id)
 				heal_in_chat = false
 				heal_in_chat_id = nil
 			end
 			
-			if isKeyDown(VK_F2) and not MainWindow[0] then
+			if IsHotkeyClicked(settings.general.bind_mainmenu) and not MainWindow[0] then
 				MainWindow[0] = true
 			end
-			
-			if isKeyDown(VK_F3) then
+
+			if IsHotkeyClicked(settings.general.bind_healme) then
+				wait(500)
 				command("/heal {my_id}", 0)
 				wait(500)
 			end
@@ -464,209 +498,40 @@ function main()
 			local valid, ped = getCharPlayerIsTargeting(PLAYER_HANDLE)
 			if valid and doesCharExist(ped) then
 				local result, id = sampGetPlayerIdByCharHandle(ped)
-				if result and id ~= -1 and isKeyJustPressed(VK_R) and isKeyJustPressed(VK_RBUTTON) then
+				if result and id ~= -1 and IsHotkeyClicked(settings.general.bind_fastmenu) and not LeaderFastMenu[0] then
 					show_fast_menu(id)
+				elseif result and id ~= -1 and IsHotkeyClicked(settings.general.bind_leader_fastmenu) and not FastMenu[0] then
+					if tonumber(settings.player_info.fraction_rank_number) >= 9 then 
+						show_leader_fast_menu(id)
+					end
 				end
+			end
+
+			if clicked then
+				local cmd = "clickMinigame"
+				local bs = raknetNewBitStream()
+				raknetBitStreamWriteInt8(bs, 220)
+				raknetBitStreamWriteInt8(bs, 18)
+				raknetBitStreamWriteInt8(bs, #cmd)
+				raknetBitStreamWriteInt8(bs, 0)
+				raknetBitStreamWriteInt8(bs, 0)
+				raknetBitStreamWriteInt8(bs, 0)
+				raknetBitStreamWriteString(bs, cmd)
+				raknetBitStreamWriteInt32(bs, 0)
+				raknetBitStreamWriteInt8(bs, 0)
+				raknetBitStreamWriteInt8(bs, 0)
+				raknetSendBitStreamEx(bs, 1, 7, 1)
+				raknetDeleteBitStream(bs)
+				setGameKeyState(1, 255)
+				wait(0)
+				setGameKeyState(1, 0)
+
 			end
 		
 		end
 		
 	end
 
-end
-
-function fast_heal_in_chat(id)
-
-	id = tonumber(id)
-	
-	if sampIsPlayerConnected(id) then
-		local _, ped = sampGetCharHandleBySampPlayerId(id)
-		local nick = sampGetPlayerNickname(id)
-		
-		if _ then 
-			local ppx, ppy, ppz = getCharCoordinates(PLAYER_PED)
-			local localx, localy, localz = getCharCoordinates(ped)
-			local x = tostring(localx):sub(1,9)
-			local y = tostring(localy):sub(1,9)
-			local z = tostring(localz):sub(1,4)
-			if math.floor(getDistanceBetweenCoords3d(ppx, ppy, ppz, x, y, z)) > 4 and math.floor(getDistanceBetweenCoords3d(ppx, ppy, ppz, x, y, z)) <= 30 then
-				sampAddChatMessage('[Hospital Helper] {ffffff}Игрок '..nick..' просит вылечить его, но вы слишком далеко от него!',message_color)
-			elseif math.floor(getDistanceBetweenCoords3d(ppx, ppy, ppz, x, y, z)) <= 4 then
-			
-				if isMonetLoader() then
-			
-					sampAddChatMessage('[Hospital Helper] {ffffff}Чтоб вылечить игрока '..nick..', в течении 5-ти секунд нажмите кнопку',message_color)
-					heal_in_chat_player_id = id
-					lua_thread.create(function() 
-						heal_in_chat = true
-						FastHealMenu[0] = true
-						wait(5000)
-						FastHealMenu[0] = false
-						heal_in_chat = false
-					end)
-			
-				else
-				
-					sampAddChatMessage('[Hospital Helper] {ffffff}Чтоб вылечить игрока '..nick..', в течении 5-ти секунд нажмите клавишy {00ccff}Enter',message_color)
-					heal_in_chat_player_id = id
-					lua_thread.create(function() 
-						heal_in_chat = true
-						wait(5000)
-						heal_in_chat = false
-					end)
-			
-				end
-			end
-		end
-	end
-
-end
-
-function registerCommandsFrom(array)
-
-	for _, command in ipairs(array) do
-	
-		if command.enable then
-		
-			sampRegisterChatCommand(command.cmd, function(arg)
-			
-				local arg_check = false
-				
-				local modifiedText = command.text
-				
-				if command.arg == '{arg}' then
-				
-					if arg and arg ~= '' then
-						modifiedText = modifiedText:gsub('{arg}', arg or "")
-						arg_check = true
-					else
-						sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [аргумент]', message_color)
-						play_error_sound()
-					end
-					
-				elseif command.arg == '{arg_id}' then
-				
-					if arg and arg ~= '' and isParamID(arg) then
-						arg = tonumber(arg)
-						modifiedText = modifiedText:gsub('%{get_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg) or "")
-						modifiedText = modifiedText:gsub('%{get_rp_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg):gsub('_',' ') or "")
-						modifiedText = modifiedText:gsub('%{get_ru_nick%(%{arg_id%}%)%}', TranslateNick(sampGetPlayerNickname(arg)) or "")
-						modifiedText = modifiedText:gsub('%{arg_id%}', arg or "")
-						arg_check = true
-					else
-						sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока]', message_color)
-						play_error_sound()
-					end
-					
-				elseif command.arg == '{arg_id} {arg2}' then
-				
-					if arg and arg ~= '' then
-						local arg_id, arg2 = arg:match('(%d+) (.+)')
-						if arg_id and arg2 and isParamID(arg_id) then
-							arg_id = tonumber(arg_id)
-							modifiedText = modifiedText:gsub('%{get_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg_id) or "")
-							modifiedText = modifiedText:gsub('%{get_rp_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg_id):gsub('_',' ') or "")
-							modifiedText = modifiedText:gsub('%{get_ru_nick%(%{arg_id%}%)%}', TranslateNick(sampGetPlayerNickname(arg_id)) or "")
-							modifiedText = modifiedText:gsub('%{arg_id%}', arg_id or "")
-							modifiedText = modifiedText:gsub('%{arg2%}', arg2 or "")
-							arg_check = true
-						else
-							sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока] [аргумент]', message_color)
-							play_error_sound()
-						end
-					else
-						sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока] [аргумент]', message_color)
-						play_error_sound()
-					end
-					
-				elseif command.arg == '' then
-					arg_check = true
-				end
-
-				if arg_check then
-				
-					lua_thread.create(function()
-					
-						local lines = {}
-
-						for line in string.gmatch(modifiedText, "[^&]+") do
-							table.insert(lines, line)
-						end
-
-						for _, line in ipairs(lines) do
-						
-							for tag, replacement in pairs(tagReplacements) do
-								local success, result = pcall(string.gsub, line, "{" .. tag .. "}", replacement())
-								if success then
-									line = result
-								else
-									
-								end
-							end
-
-							sampSendChat(line)
-							
-							
-							
-								wait( tonumber(command.waiting) * 1000 )
-						end
-						
-					end)
-				end
-			end)
-		end
-	end
-	
-end
-
-function command(cmd,id)
-
-	id = tonumber(id)
-
-	for _, command in ipairs(settings.commands) do
-		
-			if command.text:find(cmd) then
-					
-				local modifiedText = command.text
-					
-				modifiedText = modifiedText:gsub('%{get_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(id) or "")
-				modifiedText = modifiedText:gsub('%{get_rp_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(id):gsub('_',' ') or "")
-				modifiedText = modifiedText:gsub('%{get_ru_nick%(%{arg_id%}%)%}', TranslateNick(sampGetPlayerNickname(id)) or "")
-				modifiedText = modifiedText:gsub('%{arg_id%}', id or "")
-					
-				lua_thread.create(function()
-				
-					local lines = {}
-
-					for line in string.gmatch(modifiedText, "[^&]+") do
-						table.insert(lines, line)
-					end
-
-					for _, line in ipairs(lines) do
-					
-						for tag, replacement in pairs(tagReplacements) do
-							local success, result = pcall(string.gsub, line, "{" .. tag .. "}", replacement())
-							if success then
-								line = result
-							else
-								
-							end
-						end
-
-						sampSendChat(line)
-						
-						wait( tonumber(command.waiting) * 1000 )
-						
-						
-						
-					end
-					
-				end)
-				
-			end
-			
-	end
-	
 end
 
 function medosm(id)
@@ -736,21 +601,6 @@ function antibiotik(id)
 		play_error_sound()
 	end
 end
-
-function update_members()
-	lua_thread.create(function()
-		update_members_check = true
-		wait(1500)
-		if MembersWindow[0] then
-			members_new = {} 
-			members_check = true 
-			sampSendChat("/members") 
-		end
-		wait(1500)
-		update_members_check = false
-	end)
-end
-
 function spawncar()
 	if tonumber(settings.player_info.fraction_rank_number) == 9 or tonumber(settings.player_info.fraction_rank_number) == 10 then 
 		lua_thread.create(function()
@@ -806,75 +656,53 @@ end
 function sampev.onServerMessage(color,text)
 	
 	--sampAddChatMessage('color = ' .. color .. ' , text = '..text,-1)
-	
 
-	
-	if color == 766526463 and settings.general.auto_uval and not anti_flood_auto_uval and tonumber(settings.player_info.fraction_rank_number) == 9 or tonumber(settings.player_info.fraction_rank_number) == 10 then -- autouval
-
+	if color == 766526463 and settings.general.auto_uval  and tonumber(settings.player_info.fraction_rank_number) == 9 or tonumber(settings.player_info.fraction_rank_number) == 10 then -- autouval
 		if text:find("%[(.-)%] (.-) (.-)%[(.-)%]: (.+)") then -- /f /fb или /r /rb без тэга 
-		
-			lua_thread.create(function()
-			
-				local tag, rank, name, playerID, message = string.match(text, "%[(.-)%] (.+) (.-)%[(.-)%]: (.+)")
-				
-				if not message:find("], чтобы уволится ПСЖ,") and not message:find("], отправьте (.+) +++ чтобы уволится ПСЖ!") and not message:find("Сотрудник (.+) был уволен по причине (.+)") and message:find("ПСЖ") or message:find("псж") or message:find("увольте") or message:find("Увольте") or message:find("Увал") or message:find("увал") then
-					
-					PlayerID = playerID
-					
-					anti_flood_auto_uval = true
+			local tag, rank, name, playerID, message = string.match(text, "%[(.-)%] (.+) (.-)%[(.-)%]: (.+)")
+			if not message:find("], отправьте (.+) +++ чтобы уволится ПСЖ!") and not message:find("Сотрудник (.+) был уволен по причине (.+)") and message:find("ПСЖ") or message:find("псж") or message:find("увольте") or message:find("Увольте") or message:find("Увал") or message:find("увал") then
+				PlayerID = playerID
+				lua_thread.create(function()
 					wait(10)
-					
+					anti_flood_auto_uval = true
 					if tag == "R" then
 						sampSendChat("/rb "..name.."["..playerID.."], отправьте /rb +++ чтобы уволится ПСЖ!")
 					elseif tag == "F" then
 						sampSendChat("/fb "..name.."["..playerID.."], отправьте /fb +++ чтобы уволится ПСЖ!")
 					end
-					
 					wait(5000)
 					anti_flood_auto_uval = false
-				
-					
-				end
-				
-				if message == "(( +++ ))" and PlayerID == playerID then
+				end)
+			elseif message == "(( +++ ))" and PlayerID == playerID then
+				lua_thread.create(function()
 					wait(10)
-					uninvite(PlayerID.." ПСЖ")
-				end
-				
-			end)
-	
+					temp = playerID .. ' ПСЖ'
+					command("/uninvite {arg_id} {arg2}", temp)
+				end)
+			end
 		elseif text:find("%[(.-)%] %[(.-)%] (.+) (.-)%[(.-)%]: (.+)") then -- /r или /f с тэгом
-		
-			lua_thread.create(function()
-
-				local tag, tag2, rank, name, playerID, message = string.match(text, "%[(.-)%] %[(.-)%] (.+) (.-)%[(.-)%]: (.+)")
-				
-				if not message:find("], чтобы уволится ПСЖ,") and not message:find("], отправьте (.+) +++ чтобы уволится ПСЖ!") and not message:find("Сотрудник (.+) был уволен по причине (.+)") and message:find("ПСЖ") or message:find("псж") or message:find("увольте") or message:find("Увольте") or message:find("Увал") or message:find("увал") then
-					
-					PlayerID = playerID
-					
-					anti_flood_auto_uval = true
+			local tag, tag2, rank, name, playerID, message = string.match(text, "%[(.-)%] %[(.-)%] (.+) (.-)%[(.-)%]: (.+)")
+			if not message:find("], чтобы уволится ПСЖ,") and not message:find("], отправьте (.+) +++ чтобы уволится ПСЖ!") and not message:find("Сотрудник (.+) был уволен по причине (.+)") and message:find("ПСЖ") or message:find("псж") or message:find("увольте") or message:find("Увольте") or message:find("Увал") or message:find("увал") then
+				lua_thread.create(function()
 					wait(10)
-					
+					PlayerID = playerID	
+					anti_flood_auto_uval = true
 					if tag == "R" then
 						sampSendChat("/rb "..name.."["..playerID.."], отправьте /rb +++ чтобы уволится ПСЖ!")
 					elseif tag == "F" then
 						sampSendChat("/fb "..name.."["..playerID.."], отправьте /fb +++ чтобы уволится ПСЖ!")
 					end
-					
 					wait(5000)
 					anti_flood_auto_uval = false
-					
-				end 
-				
-				if message == "(( +++ ))" and PlayerID == playerID then
+				end)
+			elseif message == "(( +++ ))" and PlayerID == playerID then
+				lua_thread.create(function()
 					wait(10)
-					uninvite(PlayerID.." ПСЖ")
-				end
-					
-			end)
+					temp = playerID .. ' ПСЖ'
+					command("/uninvite {arg_id} {arg2}", temp)
+				end)
+			end
 		end
-		
 	end
 	
 	if text:find("{ffffff} Вам поступило предложение от игрока (.+)") and medcheck then
@@ -884,36 +712,25 @@ function sampev.onServerMessage(color,text)
 		end)
 	end
 	
-	if color == -1 and text:find(' говорит:') and settings.general.heal_in_chat then
-	
-		
-	
+	if settings.general.heal_in_chat and text:find('(.+)%[(%d+)%] говорит:{B7AFAF} (.+)') then
 		local nick, id, message = text:match('(.+)%[(%d+)%] говорит:{B7AFAF} (.+)')
-		if nick and id and message then
+		if nick ~= nil and id ~= nil and message ~= nil then
 			for _, keyword in ipairs(world_heal_in_chat) do
-				if message:rupper() == (keyword:rupper()) then
-					lua_thread.create(function()
-						wait(10)
-						fast_heal_in_chat(tonumber(id))
-						
-					end)
-					break -- если найдено совпадение, выходим из цикла
+				if message:rupper():find(keyword:rupper()) then
+					fast_heal_in_chat(id)
+					break
 				end
 			end
 		end
 	end
 	
-	if color == -253326081 and text:find('кричит') and settings.general.heal_in_chat then
+	if settings.general.heal_in_chat and text:find('(.+)%[(%d+)%] кричит: (.+)') then
 		local nick, id, message = text:match('(.+)%[(%d+)%] кричит: (.+)')
-		if nick and id and message then
+		if nick ~= nil and id ~= nil and message ~= nil then
 			for _, keyword in ipairs(world_heal_in_chat) do
-				if message:rupper() == (keyword:rupper()) then
-					lua_thread.create(function()
-						wait(10)
-						fast_heal_in_chat(tonumber(id))
-						
-					end)
-					break -- если найдено совпадение, выходим из цикла
+				if message:rupper():find(keyword:rupper()) then
+					fast_heal_in_chat(id)
+					break
 				end
 			end
 		end
@@ -927,18 +744,12 @@ function sampev.onServerMessage(color,text)
 	if text:find('%(%( Чтобы принять вызов, введите /godeath (%d+). Оплата за вызов (.+) %)%)') then
 		godeath_player_id = text:match('%(%( Чтобы принять вызов, введите /godeath (%d+). Оплата за вызов (.+) %)%)')
 		godeath_player_id = tonumber(godeath_player_id)
-		
 		local cmd = '/godeath'
-		
 		for _, command in ipairs(settings.commands) do
-	
-			if command.enable and command.text:find('/godeath ') then
+			if command.enable and command.text:find('/godeath') then
 				cmd =  '/' .. command.cmd
-				
 			end
-		
 		end
-		
 		sampAddChatMessage('[Hospital Helper] {ffffff}Из города ' .. message_color_hex .. godeath_city .. ' {ffffff}поступил экстренный вызов о пострадавшем человеке ' .. message_color_hex .. sampGetPlayerNickname(godeath_player_id), message_color)
 		sampAddChatMessage('[Hospital Helper] {ffffff}Чтобы принять экстренный вызов, используйте команду ' .. message_color_hex .. cmd .. ' '.. godeath_player_id, message_color)
 		return false
@@ -951,8 +762,12 @@ function sampev.onServerMessage(color,text)
 	
 end
 function sampev.onSendChat(text)
-	
+
 	local ignore = {
+		[";)"] = true,
+		[":D"] = true,
+		[":O"] = true,
+		[":|"] = true,
 		[")"] = true,
 		["))"] = true,
 		["("] = true,
@@ -1028,19 +843,7 @@ function sampev.onSendCommand(text)
 end
 function sampev.onShowDialog(dialogid, style, title, button1, button2, text)
 	
-	--sampAddChatMessage(dialogid,-1)
-
-	if dialogid == 25685 and medcheck then -- medosm
-		sampSendDialogResponse(25685, 1,0,0)
-		return false
-	end
-	
-	if dialogid == 25686 and medcheck then -- medosm
-		sampSendDialogResponse(25686, 1,5,0)
-		return false
-	end
-	
-	if dialogid == 1234 and not text:find("Законопослушность") and medcheck then -- medcard
+	if title:find('Мед. карта') and text:find("Мед. Карта %[(.+)%]\n") and medcheck then -- medcard
 		
 		medcard_narko = math.floor(text:match("{CEAD2A}Наркозависимость: (.+){FFFFFF}"))
 		medcard_status = text:match("Мед. Карта %[(.+)%]\n")
@@ -1055,27 +858,23 @@ function sampev.onShowDialog(dialogid, style, title, button1, button2, text)
 		
 	end
 
-	if dialogid == 131 then -- /hme
-		if text:find(sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)))) then
-			sampSendDialogResponse(131, 1,0,0)
-			return false
-		end
-	end
-	
-	if dialogid == 15380 then -- выдача мед.карты
-		if text:find("Полностью здоров") then
-			sampAddChatMessage('[Hospital Helper] {ffffff}Ожидайте пока игрок подтвердит получение мед. карты',message_color)
-			sampSendDialogResponse(15380, 1,0,0)
-			return false
-		end
-	end
-	
-	if dialogid == 25449 and settings.general.anti_trivoga then -- тревожная кнопка
-		sampSendDialogResponse(25449, 0, 0, 0)
+	if text:find('{FFFFFF}Медик {DAD540}(.+){FFFFFF} хочет вылечить вас за {DAD540}') and text:find(sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)))) then -- /hme
+		sampSendDialogResponse(dialogid, 1,0,0)
 		return false
 	end
 	
-	if dialogid == 235 and check_stats then -- получение статистики
+	if text:find("Проверьте и подтвердите данные перед выдачей мед карты") and text:find("Полностью здоров") then  -- автовыдача мед.карты
+		sampAddChatMessage('[Hospital Helper] {ffffff}Ожидайте пока игрок подтвердит получение мед. карты', message_color)
+		sampSendDialogResponse(dialogid, 1,0,0)
+		return false
+	end
+	
+	if text:find('Вы действительно хотите вызвать сотрудников полиции?') and settings.general.anti_trivoga then -- тревожная кнопка
+		sampSendDialogResponse(dialogid, 0, 0, 0)
+		return false
+	end
+	
+	if title:find('Основная статистика') and check_stats then -- получение статистики
 	
 		if text:find("{FFFFFF}Пол: {B83434}%[(.-)]") then
 			settings.player_info.sex = text:match("{FFFFFF}Пол: {B83434}%[(.-)]")
@@ -1101,7 +900,7 @@ function sampev.onShowDialog(dialogid, style, title, button1, button2, text)
 					settings.player_info.fraction_tag = 'Medical Center'
 				end
 				
-				input_fraction_tag = new.char[256](u8(settings.player_info.fraction_tag))
+				input_fraction_tag = imgui.new.char[256](u8(settings.player_info.fraction_tag))
 				
 				sampAddChatMessage('[Hospital Helper] {ffffff}Вашей организации присвоен тэг '..settings.player_info.fraction_tag .. ". Но вы можете изменить тэг в настройках", message_color)
 				
@@ -1125,45 +924,44 @@ function sampev.onShowDialog(dialogid, style, title, button1, button2, text)
 		return false
 	end
 
-	if dialogid == 1214 and spawncar_bool then -- спавн т/с
-	
-		sampSendDialogResponse(1214, 2, 3, 0)
+	if spawncar_bool and title:find('$') and text:find('Спавн транспорта') then -- спавн т/с
+		sampSendDialogResponse(dialogid, 2, 3, 0)
 		spawncar_bool = false
 		return false 
 		
 	end
 	
-	if dialogid == 1214 and vc_vize_bool then -- VS Visa [0]
-		sampSendDialogResponse(1214, 1, 8, 0)
+	if vc_vize_bool and text:find('Управление разрешениями на командировку в Vice City') then -- VS Visa [0]
+		sampSendDialogResponse(dialogid, 1, 8, 0)
 		return false 
 	end
 	
-	if dialogid == 25744 and vc_vize_bool then -- VS Visa [1]
+	if vc_vize_bool and title:find('Выдача разрешений на поезди Vice City') then -- VS Visa [1]
 		lua_thread.create(function()
 			vc_vize_bool = false
-			sampSendDialogResponse(25744, 1, 0, tostring(vc_vize_player_id))
+			sampSendDialogResponse(dialogid, 1, 0, tostring(vc_vize_player_id))
 			wait(get_my_wait())
 			sampSendChat("/r Сотруднику "..TranslateNick(sampGetPlayerNickname(tonumber(vc_vize_player_id))).." выдана виза для Vice City!")
 		end)
 		return false 
 	end
 	
-	if dialogid == 25820 and vc_vize_bool then -- VS Visa [2]
+	if vc_vize_bool and title:find('Забрать разрешение на поезди Vice City') then -- VS Visa [2]
 		lua_thread.create(function()
 			vc_vize_bool = false
-			sampSendDialogResponse(25820, 1, 0, tostring(sampGetPlayerNickname(vc_vize_player_id)))
+			sampSendDialogResponse(dialogid, 1, 0, tostring(sampGetPlayerNickname(vc_vize_player_id)))
 			wait(get_my_wait())
 			sampSendChat("/r У сотрудника "..TranslateNick(sampGetPlayerNickname(tonumber(vc_vize_player_id))).." изьята виза для Vice City!")
 		end)
 		return false 
 	end
 
-	if dialogid == 26608 then --  arz fast menu
-		sampSendDialogResponse(26608 , 0, 2, 0)
+	if title:find('Сущности рядом') then
+		sampSendDialogResponse(dialogid, 0, 2, 0)
 		return false 
 	end
 
-	if dialogid == 2015 and members_check then -- мемберс 
+	if members_check and title:find('(.+)%(В сети: (%d+)%)') then -- мемберс 
 
         local count = 0
         local next_page = false
@@ -1301,20 +1099,30 @@ function play_error_sound()
 	end
 end
 function show_fast_menu(id)
-	
 	if isParamID(id) then 
 		player_id = tonumber(id)
 		FastMenu[0] = true
 	else
-		if isMonetLoader() then 
+		if isMonetLoader() or settings.general.bind_fastmenu == nil then
 			if not FastMenuPlayers[0] then
-				sampAddChatMessage('[Hospital Helper] {ffffff}Используйте {00ccff}/hm [ID]',message_color)
+				sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/hm [ID]',message_color)
 			end
 		else
-			sampAddChatMessage('[Hospital Helper] {ffffff}Используйте {00ccff}/hm [ID] {ffffff}или наведитесь на игрока через {00ccff}ПКМ + R',message_color) 
+			sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/hm [ID] {ffffff}или наведитесь на игрока через ' .. message_color_hex .. 'ПКМ + ' .. getNameKeysFrom(settings.general.bind_fastmenu), message_color) 
 		end 
 	end 
-	
+end
+function show_leader_fast_menu(id)
+	if isParamID(id) then
+		player_id = tonumber(id)
+		LeaderFastMenu[0] = true
+	else
+		if settings.general.bind_leader_fastmenu == nil then
+			sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/hlm [ID]',message_color)
+		else
+			sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/hlm [ID] {ffffff}или наведитесь на игрока через ' .. message_color_hex .. 'ПКМ + ' .. getNameKeysFrom(settings.general.bind_leader_fastmenu), message_color) 
+		end 
+	end
 end
 function get_players()
 	
@@ -1367,15 +1175,318 @@ function sampGetIDByNick(nick_arg)
 		end
 	end
 end
+function registerCommandsFrom(array)
+
+	for _, command in ipairs(array) do
+	
+		if command.enable then
+		
+			sampRegisterChatCommand(command.cmd, function(arg)
+			
+				local arg_check = false
+				
+				local modifiedText = command.text
+				
+				if command.arg == '{arg}' then
+				
+					if arg and arg ~= '' then
+						modifiedText = modifiedText:gsub('{arg}', arg or "")
+						arg_check = true
+					else
+						sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [аргумент]', message_color)
+						play_error_sound()
+					end
+					
+				elseif command.arg == '{arg_id}' then
+				
+					if arg and arg ~= '' and isParamID(arg) then
+						arg = tonumber(arg)
+						modifiedText = modifiedText:gsub('%{get_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg) or "")
+						modifiedText = modifiedText:gsub('%{get_rp_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg):gsub('_',' ') or "")
+						modifiedText = modifiedText:gsub('%{get_ru_nick%(%{arg_id%}%)%}', TranslateNick(sampGetPlayerNickname(arg)) or "")
+						modifiedText = modifiedText:gsub('%{arg_id%}', arg or "")
+						arg_check = true
+					else
+						sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока]', message_color)
+						play_error_sound()
+					end
+					
+				elseif command.arg == '{arg_id} {arg2}' then
+				
+					if arg and arg ~= '' then
+						local arg_id, arg2 = arg:match('(%d+) (.+)')
+						if arg_id and arg2 and isParamID(arg_id) then
+							arg_id = tonumber(arg_id)
+							modifiedText = modifiedText:gsub('%{get_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg_id) or "")
+							modifiedText = modifiedText:gsub('%{get_rp_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg_id):gsub('_',' ') or "")
+							modifiedText = modifiedText:gsub('%{get_ru_nick%(%{arg_id%}%)%}', TranslateNick(sampGetPlayerNickname(arg_id)) or "")
+							modifiedText = modifiedText:gsub('%{arg_id%}', arg_id or "")
+							modifiedText = modifiedText:gsub('%{arg2%}', arg2 or "")
+							arg_check = true
+						else
+							sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока] [аргумент]', message_color)
+							play_error_sound()
+						end
+					else
+						sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока] [аргумент]', message_color)
+						play_error_sound()
+					end
+					
+				elseif command.arg == '' then
+					arg_check = true
+				end
+
+				if arg_check then
+				
+					lua_thread.create(function()
+					
+						local lines = {}
+
+						for line in string.gmatch(modifiedText, "[^&]+") do
+							table.insert(lines, line)
+						end
+
+						for _, line in ipairs(lines) do
+						
+							for tag, replacement in pairs(tagReplacements) do
+								local success, result = pcall(string.gsub, line, "{" .. tag .. "}", replacement())
+								if success then
+									line = result
+								else
+									
+								end
+							end
+
+							sampSendChat(line)
+							
+							
+							
+								wait( tonumber(command.waiting) * 1000 )
+						end
+						
+					end)
+				end
+			end)
+		end
+	end
+	
+end
+function command(cmd, arg)
+
+	local checker = false
+
+	for _, command in ipairs(settings.commands) do
+		
+		if command.text:find(cmd) then
+	
+				checker = true
+
+				local arg_check = false
+				local modifiedText = command.text
+				
+				if command.arg == '{arg}' then
+				
+					if arg and arg ~= '' then
+						modifiedText = modifiedText:gsub('{arg}', arg or "")
+						arg_check = true
+					else
+						sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [аргумент]', message_color)
+						play_error_sound()
+					end
+					
+				elseif command.arg == '{arg_id}' then
+				
+					if arg and arg ~= '' and isParamID(arg) then
+						arg = tonumber(arg)
+						modifiedText = modifiedText:gsub('%{get_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg) or "")
+						modifiedText = modifiedText:gsub('%{get_rp_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg):gsub('_',' ') or "")
+						modifiedText = modifiedText:gsub('%{get_ru_nick%(%{arg_id%}%)%}', TranslateNick(sampGetPlayerNickname(arg)) or "")
+						modifiedText = modifiedText:gsub('%{arg_id%}', arg or "")
+						arg_check = true
+					else
+						sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока]', message_color)
+						play_error_sound()
+					end
+					
+				elseif command.arg == '{arg_id} {arg2}' then
+				
+					if arg and arg ~= '' then
+						local arg_id, arg2 = arg:match('(%d+) (.+)')
+						if arg_id and arg2 and isParamID(arg_id) then
+							arg_id = tonumber(arg_id)
+							modifiedText = modifiedText:gsub('%{get_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg_id) or "")
+							modifiedText = modifiedText:gsub('%{get_rp_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg_id):gsub('_',' ') or "")
+							modifiedText = modifiedText:gsub('%{get_ru_nick%(%{arg_id%}%)%}', TranslateNick(sampGetPlayerNickname(arg_id)) or "")
+							modifiedText = modifiedText:gsub('%{arg_id%}', arg_id or "")
+							modifiedText = modifiedText:gsub('%{arg2%}', arg2 or "")
+							arg_check = true
+						else
+							sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока] [аргумент]', message_color)
+							play_error_sound()
+						end
+					else
+						sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока] [аргумент]', message_color)
+						play_error_sound()
+					end
+					
+				elseif command.arg == '' then
+					arg_check = true
+				end
+
+				if arg_check then
+					lua_thread.create(function()
+						local lines = {}
+						for line in string.gmatch(modifiedText, "[^&]+") do
+							table.insert(lines, line)
+						end
+						for _, line in ipairs(lines) do
+							for tag, replacement in pairs(tagReplacements) do
+								local success, result = pcall(string.gsub, line, "{" .. tag .. "}", replacement())
+								if success then
+									line = result
+								end
+							end
+							sampSendChat(line)
+							wait( tonumber(command.waiting) * 1000 )
+						end
+					end)
+				end
+				
+		end
+	end
+
+	if not checker then
+		
+		for _, command in ipairs(settings.commands_manage) do
+		
+			if command.text:find(cmd) then
+		
+					local arg_check = false
+					local modifiedText = command.text
+					
+					if command.arg == '{arg}' then
+					
+						if arg and arg ~= '' then
+							modifiedText = modifiedText:gsub('{arg}', arg or "")
+							arg_check = true
+						else
+							sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [аргумент]', message_color)
+							play_error_sound()
+						end
+						
+					elseif command.arg == '{arg_id}' then
+					
+						if arg and arg ~= '' and isParamID(arg) then
+							arg = tonumber(arg)
+							modifiedText = modifiedText:gsub('%{get_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg) or "")
+							modifiedText = modifiedText:gsub('%{get_rp_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg):gsub('_',' ') or "")
+							modifiedText = modifiedText:gsub('%{get_ru_nick%(%{arg_id%}%)%}', TranslateNick(sampGetPlayerNickname(arg)) or "")
+							modifiedText = modifiedText:gsub('%{arg_id%}', arg or "")
+							arg_check = true
+						else
+							sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока]', message_color)
+							play_error_sound()
+						end
+						
+					elseif command.arg == '{arg_id} {arg2}' then
+					
+						if arg and arg ~= '' then
+							local arg_id, arg2 = arg:match('(%d+) (.+)')
+							if arg_id and arg2 and isParamID(arg_id) then
+								arg_id = tonumber(arg_id)
+								modifiedText = modifiedText:gsub('%{get_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg_id) or "")
+								modifiedText = modifiedText:gsub('%{get_rp_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg_id):gsub('_',' ') or "")
+								modifiedText = modifiedText:gsub('%{get_ru_nick%(%{arg_id%}%)%}', TranslateNick(sampGetPlayerNickname(arg_id)) or "")
+								modifiedText = modifiedText:gsub('%{arg_id%}', arg_id or "")
+								modifiedText = modifiedText:gsub('%{arg2%}', arg2 or "")
+								arg_check = true
+							else
+								sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока] [аргумент]', message_color)
+								play_error_sound()
+							end
+						else
+							sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. command.cmd .. ' [ID игрока] [аргумент]', message_color)
+							play_error_sound()
+						end
+						
+					elseif command.arg == '' then
+						arg_check = true
+					end
+
+					if arg_check then
+						lua_thread.create(function()
+							local lines = {}
+							for line in string.gmatch(modifiedText, "[^&]+") do
+								table.insert(lines, line)
+							end
+							for _, line in ipairs(lines) do
+								for tag, replacement in pairs(tagReplacements) do
+									local success, result = pcall(string.gsub, line, "{" .. tag .. "}", replacement())
+									if success then
+										line = result
+									end
+								end
+								sampSendChat(line)
+								wait( tonumber(command.waiting) * 1000 )
+							end
+						end)
+					end
+					
+			end
+		end
+
+	end
+
+end
+function fast_heal_in_chat(id)
+	if isMonetLoader() then
+		sampAddChatMessage('[Hospital Helper] {ffffff}Чтоб вылечить игрока ' .. sampGetPlayerNickname(id) .. ', в течении 5-ти секунд нажмите кнопку',message_color)
+		heal_in_chat_player_id = id
+		lua_thread.create(function() 
+			heal_in_chat = true
+			FastHealMenu[0] = true
+			wait(5000)
+			FastHealMenu[0] = false
+			heal_in_chat = false
+		end)
+	else
+		sampAddChatMessage('[Hospital Helper] {ffffff}Чтобы вылечить игрока ' .. sampGetPlayerNickname(id) .. ' нажмите ' .. message_color_hex .. getNameKeysFrom(settings.general.bind_fastheal) .. ' {ffffff}в течении 5-ти секунд!',message_color)
+		heal_in_chat_player_id = id
+		lua_thread.create(function() 
+			heal_in_chat = true
+			wait(5000)
+			heal_in_chat = false
+		end)
+	end
+end
+function openLink(link)
+	if isMonetLoader() then
+		gta._Z12AND_OpenLinkPKc(link)
+	else
+		os.execute("explorer " .. link)
+	end
+end
+function onReceivePacket(id, bs) -- автоматический клик для "Крушение самолета" и "Авария на шосе" (взято из кода Chapo)
+	if id == 220 then
+		raknetBitStreamIgnoreBits(bs, 8)
+		if raknetBitStreamReadInt8(bs) == 17 then
+			raknetBitStreamIgnoreBits(bs, 32)
+			local cmd = raknetBitStreamReadString(bs, raknetBitStreamReadInt32(bs))
+			local view = string.match(cmd, "^window.executeEvent%('event%.setActiveView', [`']%[[\"%s]?(.-)[\"%s]?%][`']%);$")
+			if view ~= nil then
+				clicked = (view == "Clicker")
+			end
+		end
+	end
+end
 
 imgui.OnInitialize(function()
 
 	imgui.GetIO().IniFilename = nil
+
 	fa.Init(14 * MONET_DPI_SCALE)
 
-	if settings.general.moonmonet_theme_enable and monet_check_errors then
-		
-		gen_color = monet.buildColors(settings.general.moonmonet_theme_color, 1.0, true)
+	if settings.general.moonmonet_theme_enable and monet_no_errors then
 		apply_moonmonet_theme()
 	else 
 		apply_dark_theme()
@@ -1383,21 +1494,15 @@ imgui.OnInitialize(function()
 	
 end)
 
-local MainWindow = imgui.OnFrame(
+imgui.OnFrame(
     function() return MainWindow[0] end,
     function(player)
-	
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(600 * MONET_DPI_SCALE, 425	* MONET_DPI_SCALE), imgui.Cond.FirstUseEver)
-		imgui.Begin(fa.HOSPITAL.." Hospital Helper##main", MainWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove )
-		
-		if imgui.BeginTabBar('Tabs') then
-		
+		imgui.Begin(fa.HOSPITAL.." Hospital Helper##main", MainWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize )
+		if imgui.BeginTabBar('Tabs') then	
 			if imgui.BeginTabItem(fa.HOUSE..u8' Главное меню') then
-			
-				
 				if imgui.BeginChild('##1', imgui.ImVec2(589 * MONET_DPI_SCALE, 172 * MONET_DPI_SCALE), true) then
-				
 					imgui.CenterText(fa.USER_DOCTOR .. u8' Информация про сотрудника')
 					imgui.Separator()
 					imgui.Columns(3)
@@ -1409,38 +1514,37 @@ local MainWindow = imgui.OnFrame(
 					imgui.NextColumn()
 					if imgui.CenterColumnSmallButton(u8'Изменить##name_surname') then
 						settings.player_info.name_surname = TranslateNick(sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))))
-						input_name_surname = new.char[256](u8(settings.player_info.name_surname))
+						input_name_surname = imgui.new.char[256](u8(settings.player_info.name_surname))
 						save_settings()
 						imgui.OpenPopup(fa.USER_DOCTOR .. u8' Имя и Фамилия##name_surname')
 					end
-					if imgui.BeginPopupModal(fa.USER_DOCTOR .. u8' Имя и Фамилия##name_surname', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove ) then
-						imgui.PushItemWidth(200 * MONET_DPI_SCALE)
+					if imgui.BeginPopupModal(fa.USER_DOCTOR .. u8' Имя и Фамилия##name_surname', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  ) then
+						imgui.PushItemWidth(405 * MONET_DPI_SCALE)
 						imgui.InputText(u8'##name_surname', input_name_surname, 256) 
-						if imgui.Button(u8'Сохранить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+						imgui.Separator()
+						if imgui.Button(fa.CIRCLE_XMARK .. u8' Отмена', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+							imgui.CloseCurrentPopup()
+						end
+						imgui.SameLine()
+						if imgui.Button(fa.FLOPPY_DISK .. u8' Сохранить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
 							settings.player_info.name_surname = u8:decode(ffi.string(input_name_surname))
 							save_settings()
 							imgui.CloseCurrentPopup()
 						end
 						imgui.End()
 					end
-					
 					imgui.SetColumnWidth(-1, 100 * MONET_DPI_SCALE)
-					
 					imgui.Columns(1)
-					
 					imgui.Separator()
-					
 					imgui.Columns(3)
 					imgui.CenterColumnText(u8"Пол:")
 					imgui.NextColumn()
 					imgui.CenterColumnText(u8(settings.player_info.sex))
 					imgui.NextColumn()
 					if imgui.CenterColumnSmallButton(u8'Изменить##sex') then
-					
-						
 						if settings.player_info.sex == 'Неизвестно' then
-							check_stats = true
-							sampSendChat('/stats')
+							settings.player_info.sex = 'Женщина'
+							save_settings()
 						elseif settings.player_info.sex == 'Мужчина' then
 							settings.player_info.sex = 'Женщина'
 							save_settings()
@@ -1448,13 +1552,9 @@ local MainWindow = imgui.OnFrame(
 							settings.player_info.sex = 'Мужчина'
 							save_settings()
 						end
-						
-						
 					end
 					imgui.Columns(1)
-					
 					imgui.Separator()
-					
 					imgui.Columns(3)
 					imgui.CenterColumnText(u8"Акцент:")
 					imgui.NextColumn()
@@ -1467,20 +1567,20 @@ local MainWindow = imgui.OnFrame(
 					if imgui.CenterColumnSmallButton(u8'Изменить##accent') then
 						imgui.OpenPopup(fa.USER_DOCTOR .. u8' Акцент персонажа##accent')
 					end
-					if imgui.BeginPopupModal(fa.USER_DOCTOR .. u8' Акцент персонажа##accent', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove ) then
-						
+					if imgui.BeginPopupModal(fa.USER_DOCTOR .. u8' Акцент персонажа##accent', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  ) then
 						if imgui.Checkbox('##checkbox_accent_enable', checkbox_accent_enable) then
 							settings.general.accent_enable = checkbox_accent_enable[0]
 							save_settings()
 						end
-						
 						imgui.SameLine()
-						
-						imgui.PushItemWidth(170 * MONET_DPI_SCALE)
+						imgui.PushItemWidth(375 * MONET_DPI_SCALE)
 						imgui.InputText(u8'##accent_input', input_accent, 256) 
-						
 						imgui.Separator()
-						if imgui.Button(u8'Сохранить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then 
+						if imgui.Button(fa.CIRCLE_XMARK .. u8' Отмена', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+							imgui.CloseCurrentPopup()
+						end
+						imgui.SameLine()
+						if imgui.Button(fa.FLOPPY_DISK .. u8' Сохранить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then 
 							settings.player_info.accent = u8:decode(ffi.string(input_accent))
 							save_settings()
 							imgui.CloseCurrentPopup()
@@ -1488,26 +1588,18 @@ local MainWindow = imgui.OnFrame(
 						imgui.End()
 					end
 					imgui.Columns(1)
-					
 					imgui.Separator()
-					
-
-					
 					imgui.Columns(3)
 					imgui.CenterColumnText(u8"Организация:")
 					imgui.NextColumn()
 					imgui.CenterColumnText(u8(settings.player_info.fraction))
 					imgui.NextColumn()
-					
 					if imgui.CenterColumnSmallButton(u8'Изменить##fraction') then
 						check_stats = true
 						sampSendChat('/stats')
 					end
-					
 					imgui.Columns(1)
-					
 					imgui.Separator()
-					
 					imgui.Columns(3)
 					imgui.CenterColumnText(u8"Тэг организации:")
 					imgui.NextColumn()
@@ -1516,11 +1608,15 @@ local MainWindow = imgui.OnFrame(
 					if imgui.CenterColumnSmallButton(u8'Изменить##fraction_tag') then
 						imgui.OpenPopup(fa.USER_DOCTOR .. u8' Тэг организации##fraction_tag')
 					end
-					if imgui.BeginPopupModal(fa.USER_DOCTOR .. u8' Тэг организации##fraction_tag', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove ) then
-						imgui.PushItemWidth(200 * MONET_DPI_SCALE)
+					if imgui.BeginPopupModal(fa.USER_DOCTOR .. u8' Тэг организации##fraction_tag', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  ) then
+						imgui.PushItemWidth(405 * MONET_DPI_SCALE)
 						imgui.InputText(u8'##input_fraction_tag', input_fraction_tag, 256)
 						imgui.Separator()
-						if imgui.Button(u8'Сохранить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+						if imgui.Button(fa.CIRCLE_XMARK .. u8' Отмена', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+							imgui.CloseCurrentPopup()
+						end
+						imgui.SameLine()
+						if imgui.Button(fa.FLOPPY_DISK .. u8' Сохранить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
 							settings.player_info.fraction_tag = u8:decode(ffi.string(input_fraction_tag))
 							save_settings()
 							imgui.CloseCurrentPopup()
@@ -1544,12 +1640,9 @@ local MainWindow = imgui.OnFrame(
 				
 				imgui.EndChild()
 				end
-				
 				if imgui.BeginChild('##2', imgui.ImVec2(589 * MONET_DPI_SCALE, 53 * MONET_DPI_SCALE), true) then
-				
 					imgui.CenterText(fa.CIRCLE_INFO .. u8' Дополнительная информация')
 					imgui.Separator()
-				
 					imgui.Columns(3)
 					imgui.CenterColumnText(u8"Причина выгона для /expel:")
 					imgui.SetColumnWidth(-1, 230 * MONET_DPI_SCALE)
@@ -1560,10 +1653,15 @@ local MainWindow = imgui.OnFrame(
 					if imgui.CenterColumnSmallButton(u8'Изменить##expel_reason') then
 						imgui.OpenPopup(fa.DOOR_OPEN .. u8' Изменить причину для выгона##expel_reason')
 					end
-					if imgui.BeginPopupModal(fa.DOOR_OPEN .. u8' Изменить причину для выгона##expel_reason', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove ) then
-						imgui.PushItemWidth(200 * MONET_DPI_SCALE)
+					if imgui.BeginPopupModal(fa.DOOR_OPEN .. u8' Изменить причину для выгона##expel_reason', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  ) then
+						imgui.PushItemWidth(405 * MONET_DPI_SCALE)
 						imgui.InputText(u8'##expel_reason', input_expel_reason, 256) 
-						if imgui.Button(u8'Сохранить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+						imgui.Separator()
+						if imgui.Button(fa.CIRCLE_XMARK .. u8' Отмена', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+							imgui.CloseCurrentPopup()
+						end
+						imgui.SameLine()
+						if imgui.Button(fa.FLOPPY_DISK .. u8' Сохранить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
 							settings.general.expel_reason = u8:decode(ffi.string(input_expel_reason))
 							save_settings()
 							imgui.CloseCurrentPopup()
@@ -1571,25 +1669,12 @@ local MainWindow = imgui.OnFrame(
 						imgui.End()
 					end
 					imgui.SetColumnWidth(-1, 100 * MONET_DPI_SCALE)
-					
 					imgui.Columns(1)
-					
-					
-					
-					
-					
-					
-				
-				
 				imgui.EndChild()
 				end
-				
 				if imgui.BeginChild('##3', imgui.ImVec2(589 * MONET_DPI_SCALE, 125 * MONET_DPI_SCALE), true) then
-				
 					imgui.CenterText(fa.SITEMAP .. u8' Дополнительные функции')
 					imgui.Separator()
-					
-
 					imgui.Columns(3)
 					imgui.CenterColumnText(u8"Анти Тревожная Кнопка")
 					imgui.SameLine(nil, 5) imgui.TextDisabled("[?]")
@@ -1605,16 +1690,20 @@ local MainWindow = imgui.OnFrame(
 					end
 					imgui.SetColumnWidth(-1, 250 * MONET_DPI_SCALE)
 					imgui.NextColumn()
-					if imgui.CenterColumnSmallButton(u8'Изменить##anti_trivoga') then
-						settings.general.anti_trivoga = not settings.general.anti_trivoga
-						save_settings()
+					if settings.general.anti_trivoga then
+						if imgui.CenterColumnSmallButton(u8'Отключить##anti_trivoga') then
+							settings.general.anti_trivoga = false
+							save_settings()
+						end
+						else
+						if imgui.CenterColumnSmallButton(u8'Включить##anti_trivoga') then
+							settings.general.anti_trivoga = true
+							save_settings()
+						end
 					end
 					imgui.SetColumnWidth(-1, 100 * MONET_DPI_SCALE)
-					
 					imgui.Columns(1)
-					
 					imgui.Separator()
-					
 					imgui.Columns(3)
 					imgui.CenterColumnText(u8"Хил из чата")
 					imgui.SameLine(nil, 5) imgui.TextDisabled("[?]")
@@ -1628,15 +1717,19 @@ local MainWindow = imgui.OnFrame(
 						imgui.CenterColumnText(u8'Отключено')
 					end
 					imgui.NextColumn()
-					if imgui.CenterColumnSmallButton(u8'Изменить##healinchat') then
-						settings.general.heal_in_chat = not settings.general.heal_in_chat
-						save_settings()
+					if settings.general.heal_in_chat then
+						if imgui.CenterColumnSmallButton(u8'Отключить##heal_in_chat') then
+							settings.general.heal_in_chat = false
+							save_settings()
+						end
+						else
+						if imgui.CenterColumnSmallButton(u8'Включить##heal_in_chat') then
+							settings.general.heal_in_chat = true
+							save_settings()
+						end
 					end
-					
 					imgui.Columns(1)
-					
 					imgui.Separator()
-					
 					imgui.Columns(3)
 					imgui.CenterColumnText(u8"RP Общение")
 					imgui.SameLine(nil, 5) imgui.TextDisabled("[?]")
@@ -1650,15 +1743,19 @@ local MainWindow = imgui.OnFrame(
 						imgui.CenterColumnText(u8'Отключено')
 					end
 					imgui.NextColumn()
-					if imgui.CenterColumnSmallButton(u8'Изменить##rp_chat') then
-						settings.general.rp_chat = not settings.general.rp_chat
-						save_settings()
+					if settings.general.rp_chat then
+						if imgui.CenterColumnSmallButton(u8'Отключить##rp_chat') then
+							settings.general.rp_chat = false
+							save_settings()
+						end
+						else
+						if imgui.CenterColumnSmallButton(u8'Включить##rp_chat') then
+							settings.general.rp_chat = true
+							save_settings()
+						end
 					end
-					
 					imgui.Columns(1)
-					
 					imgui.Separator()
-					
 					imgui.Columns(3)
 					imgui.CenterColumnText(u8"Авто Увал")
 					imgui.SameLine(nil, 5) imgui.TextDisabled("[?]")
@@ -1672,32 +1769,30 @@ local MainWindow = imgui.OnFrame(
 						imgui.CenterColumnText(u8'Отключено')
 					end
 					imgui.NextColumn()
-					if imgui.CenterColumnSmallButton(u8'Изменить##autouval') then
-						if tonumber(settings.player_info.fraction_rank_number) == 9 or tonumber(settings.player_info.fraction_rank_number) == 10 then 
-							settings.general.auto_uval = not settings.general.auto_uval
-						else
+					if settings.general.auto_uval then
+						if imgui.CenterColumnSmallButton(u8'Отключить##auto_uval') then
 							settings.general.auto_uval = false
-							sampAddChatMessage('[Hospital Helper] {ffffff}Эта Функция доступна только лидеру и заместителям!',message_color)
+							save_settings()
 						end
-						save_settings()
+					else
+						if imgui.CenterColumnSmallButton(u8'Включить##auto_uval') then
+							if tonumber(settings.player_info.fraction_rank_number) == 9 or tonumber(settings.player_info.fraction_rank_number) == 10 then 
+								settings.general.auto_uval = true
+								save_settings()
+							else
+								settings.general.auto_uval = false
+								sampAddChatMessage('[Hospital Helper] {ffffff}Эта Функция доступна только лидеру и заместителям!',message_color)
+							end
+						end
 					end
-					
-					
-				
 				imgui.EndChild()
 				end
-	
 				imgui.EndTabItem()
 			end
-			
 			if imgui.BeginTabItem(fa.RECTANGLE_LIST..u8' Команды и отыгровки') then 
-				
 				if imgui.BeginTabBar('Tabs2') then
-				
 					if imgui.BeginTabItem(fa.BARS..u8' Общие команды для всех рангов ') then 
-							
 						if imgui.BeginChild('##1', imgui.ImVec2(589 * MONET_DPI_SCALE, 303 * MONET_DPI_SCALE), true) then
-				
 							imgui.Columns(3)
 							imgui.CenterColumnText(u8"Команда")
 							imgui.SetColumnWidth(-1, 170 * MONET_DPI_SCALE)
@@ -1708,9 +1803,7 @@ local MainWindow = imgui.OnFrame(
 							imgui.CenterColumnText(u8"Действие")
 							imgui.SetColumnWidth(-1, 150 * MONET_DPI_SCALE)
 							imgui.Columns(1)
-							
 							imgui.Separator()
-							
 							imgui.Columns(3)
 							imgui.CenterColumnText(u8"/hh")
 							imgui.NextColumn()
@@ -1718,9 +1811,7 @@ local MainWindow = imgui.OnFrame(
 							imgui.NextColumn()
 							imgui.CenterColumnText(u8"Недоступно")
 							imgui.Columns(1)
-					
 							imgui.Separator()
-							
 							imgui.Columns(3)
 							imgui.CenterColumnText(u8"/hm")
 							imgui.NextColumn()
@@ -1728,9 +1819,17 @@ local MainWindow = imgui.OnFrame(
 							imgui.NextColumn()
 							imgui.CenterColumnText(u8"Недоступно")
 							imgui.Columns(1)
-							
+							if not isMonetLoader() then
+								imgui.Separator()
+								imgui.Columns(3)
+								imgui.CenterColumnText(u8"/hlm")
+								imgui.NextColumn()
+								imgui.CenterColumnText(u8"Открыть быстрое меню управления")
+								imgui.NextColumn()
+								imgui.CenterColumnText(u8"Недоступно")
+								imgui.Columns(1)
+							end
 							imgui.Separator()
-							
 							imgui.Columns(3)
 							imgui.CenterColumnText(u8"/mb")
 							imgui.NextColumn()
@@ -1738,9 +1837,7 @@ local MainWindow = imgui.OnFrame(
 							imgui.NextColumn()
 							imgui.CenterColumnText(u8"Недоступно")
 							imgui.Columns(1)
-							
 							imgui.Separator()
-							
 							imgui.Columns(3)
 							imgui.CenterColumnText(u8"/mс")
 							imgui.NextColumn()
@@ -1748,9 +1845,7 @@ local MainWindow = imgui.OnFrame(
 							imgui.NextColumn()
 							imgui.CenterColumnText(u8"Недоступно")
 							imgui.Columns(1)
-							
 							imgui.Separator()
-							
 							imgui.Columns(3)
 							imgui.CenterColumnText(u8"/ant")
 							imgui.NextColumn()
@@ -1758,19 +1853,15 @@ local MainWindow = imgui.OnFrame(
 							imgui.NextColumn()
 							imgui.CenterColumnText(u8"Недоступно")
 							imgui.Columns(1)
-							
 							imgui.Separator()
-							
 							imgui.Columns(3)
-							imgui.CenterColumnText(u8"/rec")
+							imgui.CenterColumnText(u8"/recept")
 							imgui.NextColumn()
 							imgui.CenterColumnText(u8"Выдать игроку рецепты")
 							imgui.NextColumn()
 							imgui.CenterColumnText(u8"Недоступно")
 							imgui.Columns(1)
-							
 							imgui.Separator()
-							
 							imgui.Columns(3)
 							imgui.CenterColumnText(u8"/osm")
 							imgui.NextColumn()
@@ -1778,13 +1869,9 @@ local MainWindow = imgui.OnFrame(
 							imgui.NextColumn()
 							imgui.CenterColumnText(u8"Недоступно")
 							imgui.Columns(1)
-							
 							imgui.Separator()
-							
-							for _, command in ipairs(settings.commands) do
-							
+							for index, command in ipairs(settings.commands) do
 								imgui.Columns(3)
-								
 								if command.enable then
 									imgui.CenterColumnText('/' .. u8(command.cmd))
 									imgui.NextColumn()
@@ -1796,12 +1883,8 @@ local MainWindow = imgui.OnFrame(
 									imgui.CenterColumnTextDisabled(u8(command.description))
 									imgui.NextColumn()
 								end
-								
-								imgui.Text('      ')
-								
+								imgui.Text(' ')
 								imgui.SameLine()
-								
-								
 								if command.enable then
 									if imgui.SmallButton(fa.TOGGLE_ON .. '##'..command.cmd) then
 										command.enable = not command.enable
@@ -1813,10 +1896,8 @@ local MainWindow = imgui.OnFrame(
 									end
 								else
 									if imgui.SmallButton(fa.TOGGLE_OFF .. '##'..command.cmd) then
-									
 										command.enable = not command.enable
 										save_settings()
-										
 										sampRegisterChatCommand(command.cmd, function(arg)
 			
 											local arg_check = false
@@ -1903,20 +1984,15 @@ local MainWindow = imgui.OnFrame(
 												end)
 											end
 										end)
-										
 									end
 									if imgui.IsItemHovered() then
 										imgui.SetTooltip(u8"Включение команды /"..command.cmd)
 									end
 								end
-								
 								imgui.SameLine()
-								
 								if imgui.SmallButton(fa.PEN_TO_SQUARE .. '##'..command.cmd) then
-								
 									change_description = command.description
 									input_description = ffi.new("char[256]", u8(change_description))
-									
 									change_arg = command.arg
 									if command.arg == '' then
 										ComboTags[0] = 0
@@ -1927,62 +2003,61 @@ local MainWindow = imgui.OnFrame(
 									elseif command.arg == '{arg_id} {arg2}' then
 										ComboTags[0] = 3
 									end
-									
 									change_cmd = command.cmd
 									input_cmd = ffi.new("char[256]", command.cmd)
-									
 									change_text = command.text:gsub('&', '\n')
 									input_text = ffi.new("char[8192]", u8(change_text))
-									
-									slider = new.float( tonumber(command.waiting) )
-											
+									waiting_slider = imgui.new.float( tonumber(command.waiting) )	
 									BinderWindow[0] = true
-									
 								end
 								if imgui.IsItemHovered() then
 									imgui.SetTooltip(u8"Изменение команды /"..command.cmd)
 								end
-							
+								imgui.SameLine()
+								if imgui.SmallButton(fa.TRASH_CAN .. '##'..command.cmd) then
+									imgui.OpenPopup(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##' .. command.cmd)
+								end
+								if imgui.IsItemHovered() then
+									imgui.SetTooltip(u8"Удаление команды /"..command.cmd)
+								end
+								if imgui.BeginPopupModal(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##' .. command.cmd, _, imgui.WindowFlags.NoResize ) then
+									imgui.CenterText(u8'Вы действительно хотите удалить команду /' .. u8(command.cmd) .. '?')
+									imgui.Separator()
+									if imgui.Button(fa.CIRCLE_XMARK .. u8' Нет, отменить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+										imgui.CloseCurrentPopup()
+									end
+									imgui.SameLine()
+									if imgui.Button(fa.TRASH_CAN .. u8' Да, удалить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+										table.remove(settings.commands, index)
+										save_settings()
+										imgui.CloseCurrentPopup()
+									end
+									imgui.End()
+								end
 								imgui.Columns(1)
 								imgui.Separator()
-		
 							end
-							
 						imgui.EndChild()
 					end
-				
-						if imgui.Button(fa.CIRCLE_PLUS .. u8' Создать новую команду##new_cmd',imgui.ImVec2(imgui.GetMiddleButtonX(1), 0)) then
-								
-								local new_cmd = {cmd = '', description = 'Новая команда созданная вами', text = '', arg = '', enable = true , waiting = '1.500'}
-
-								table.insert(settings.commands, new_cmd)
-								
-								change_description = new_cmd.description
-								input_description = ffi.new("char[256]", u8(change_description))
-								
-								change_arg = new_cmd.arg
-								ComboTags[0] = 0
-								
-								change_cmd = new_cmd.cmd
-								input_cmd = ffi.new("char[256]", new_cmd.cmd)
-								
-								change_text = new_cmd.text:gsub('&', '\n')
-								input_text = ffi.new("char[8192]", u8(change_text))
-								
-								slider = new.float( 1.500 )
-								
-								BinderWindow[0] = true
-								
-							end
-					
-						imgui.EndTabItem()
+					if imgui.Button(fa.CIRCLE_PLUS .. u8' Создать новую команду##new_cmd',imgui.ImVec2(imgui.GetMiddleButtonX(1), 0)) then
+						local new_cmd = {cmd = '', description = 'Новая команда созданная вами', text = '', arg = '', enable = true , waiting = '1.500'}
+						table.insert(settings.commands, new_cmd)
+						change_description = new_cmd.description
+						input_description = ffi.new("char[256]", u8(change_description))
+						change_arg = new_cmd.arg
+						ComboTags[0] = 0
+						change_cmd = new_cmd.cmd
+						input_cmd = ffi.new("char[256]", new_cmd.cmd)
+						change_text = new_cmd.text:gsub('&', '\n')
+						input_text = ffi.new("char[8192]", u8(change_text))
+						waiting_slider = imgui.new.float( 1.500 )
+						BinderWindow[0] = true
 					end
-					
+					imgui.EndTabItem()
+					end
 					if imgui.BeginTabItem(fa.BARS..u8' Команды для 9-10 рангов') then 
 						if tonumber(settings.player_info.fraction_rank_number) == 9 or tonumber(settings.player_info.fraction_rank_number) == 10 then
-							
 							if imgui.BeginChild('##1', imgui.ImVec2(589 * MONET_DPI_SCALE, 303 * MONET_DPI_SCALE), true) then
-				
 								imgui.Columns(3)
 								imgui.CenterColumnText(u8"Команда")
 								imgui.SetColumnWidth(-1, 170 * MONET_DPI_SCALE)
@@ -1993,13 +2068,9 @@ local MainWindow = imgui.OnFrame(
 								imgui.CenterColumnText(u8"Действие")
 								imgui.SetColumnWidth(-1, 150 * MONET_DPI_SCALE)
 								imgui.Columns(1)
-								
 								imgui.Separator()
-								
-								for _, command in ipairs(settings.commands_manage) do
-							
+								for index, command in ipairs(settings.commands_manage) do
 									imgui.Columns(3)
-									
 									if command.enable then
 										imgui.CenterColumnText('/' .. u8(command.cmd))
 										imgui.NextColumn()
@@ -2011,11 +2082,8 @@ local MainWindow = imgui.OnFrame(
 										imgui.CenterColumnTextDisabled(u8(command.description))
 										imgui.NextColumn()
 									end
-									
-									imgui.Text('      ')
-									
+									imgui.Text('  ')
 									imgui.SameLine()
-									
 									if command.enable then
 										if imgui.SmallButton(fa.TOGGLE_ON .. '##'..command.cmd) then
 											command.enable = not command.enable
@@ -2120,14 +2188,10 @@ local MainWindow = imgui.OnFrame(
 											imgui.SetTooltip(u8"Включение команды /"..command.cmd)
 										end
 									end
-									
 									imgui.SameLine()
-									
 									if imgui.SmallButton(fa.PEN_TO_SQUARE .. '##'..command.cmd) then
-									
 										change_description = command.description
 										input_description = ffi.new("char[256]", u8(change_description))
-										
 										change_arg = command.arg
 										if command.arg == '' then
 											ComboTags[0] = 0
@@ -2138,40 +2202,41 @@ local MainWindow = imgui.OnFrame(
 										elseif command.arg == '{arg_id} {arg2}' then
 											ComboTags[0] = 3
 										end
-										
 										change_cmd = command.cmd
 										input_cmd = ffi.new("char[256]", command.cmd)
-										
 										change_text = command.text:gsub('&', '\n')
 										input_text = ffi.new("char[8192]", u8(change_text))
-										
 										binder_create_command_9_10 = true
-										
-										
-										slider = new.float( tonumber(command.waiting) )
-												
+										waiting_slider = imgui.new.float( tonumber(command.waiting) )	
 										BinderWindow[0] = true
-										
 									end
 									if imgui.IsItemHovered() then
 										imgui.SetTooltip(u8"Изменение команды /"..command.cmd)
 									end
-									
-									--[[imgui.SameLine()
-									
-									if imgui.SmallButton(fa.CLONE .. '##'..command.cmd) then
-										sampAddChatMessage('[Hospital Helper] {ffffff}Клонирование временно не доступно!', message_color)
+									imgui.SameLine()
+									if imgui.SmallButton(fa.TRASH_CAN .. '##'..command.cmd) then
+										imgui.OpenPopup(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##9-10' .. command.cmd)
 									end
-									if imgui.IsItemHovered() then
-										imgui.SetTooltip(u8"Клонировать команду /"..command.cmd)
-									end]]
-									
-									
+									if imgui.IsItemHovered() then	
+										imgui.SetTooltip(u8"Удаление команды /"..command.cmd)
+									end
+									if imgui.BeginPopupModal(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##9-10' .. command.cmd, _, imgui.WindowFlags.NoResize ) then
+										imgui.CenterText(u8'Вы действительно хотите удалить команду /' .. u8(command.cmd) .. '?')
+										imgui.Separator()
+										if imgui.Button(fa.CIRCLE_XMARK .. u8' Нет, отменить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+											imgui.CloseCurrentPopup()
+										end
+										imgui.SameLine()
+										if imgui.Button(fa.TRASH_CAN .. u8' Да, удалить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+											table.remove(settings.commands_manage, index)
+											save_settings()
+											imgui.CloseCurrentPopup()
+										end
+										imgui.End()
+									end
 									imgui.Columns(1)
 									imgui.Separator()
-								
 								end
-								
 								imgui.Columns(3)
 								imgui.CenterColumnText(u8"/vc")
 								imgui.NextColumn()
@@ -2179,9 +2244,7 @@ local MainWindow = imgui.OnFrame(
 								imgui.NextColumn()
 								imgui.CenterColumnText(u8"Недоступно")
 								imgui.Columns(1)
-								
 								imgui.Separator()
-								
 								imgui.Columns(3)
 								imgui.CenterColumnText(u8"/spawncar")
 								imgui.NextColumn()
@@ -2189,97 +2252,128 @@ local MainWindow = imgui.OnFrame(
 								imgui.NextColumn()
 								imgui.CenterColumnText(u8"Недоступно")
 								imgui.Columns(1)
-								
-								imgui.Separator()
-								
-								
-								
+								imgui.Separator()							
 								imgui.EndChild()
-								
-								
-								
 							end
-							
 							if imgui.Button(fa.CIRCLE_PLUS .. u8' Создать новую команду##new_cmd_9-10', imgui.ImVec2(imgui.GetMiddleButtonX(1), 0)) then
-								
 								binder_create_command_9_10 = true
-							
 								local new_cmd = {cmd = '', description = 'Новая команда созданная вами', text = '', arg = '', enable = true }
-
 								table.insert(settings.commands_manage, new_cmd)
-								
 								change_description = new_cmd.description
 								input_description = ffi.new("char[256]", u8(change_description))
-								
 								change_arg = new_cmd.arg
 								ComboTags[0] = 0
-								
 								change_cmd = new_cmd.cmd
 								input_cmd = ffi.new("char[256]", new_cmd.cmd)
-								
 								change_text = new_cmd.text:gsub('&', '\n')
 								input_text = ffi.new("char[8192]", u8(change_text))
-								
-								slider = new.float( 1.500 )
-								
+								waiting_slider = imgui.new.float( 1.500 )
 								BinderWindow[0] = true
-								
 							end
-							
 						else
-							imgui.Text(u8" У вас нет доступа к данным командам, так как вы "..settings.player_info.fraction_rank_number..u8" ранг.")
+							imgui.Text(u8" У вас нет доступа к данным командам, потому что вы "..settings.player_info.fraction_rank_number..u8" ранг.")
 						end
 						imgui.EndTabItem() 
 					end
-					
-					if imgui.BeginTabItem(fa.BARS..u8' Дополнительные функции') then 
-						
-						
-						if isMonetLoader() then
+					if isMonetLoader() then
+						if imgui.BeginTabItem(fa.BARS..u8' Дополнительные функции') then 
 							imgui.Text(u8'Открыть быстрое меню взаимодействия с игроком:')
 							imgui.Text(u8'Подойдите к игроку и нажмите на кнопку "Взаимодействие" в левом углу ')
-						else
-							imgui.Text(u8'Открыть главное меню хелпера: F2')
-							imgui.Text(u8'Открыть быстрое меню взаимодействия с игроком:  ПКМ + R')
+							imgui.EndTabItem() 
 						end
+						imgui.EndTabBar() 
+					else
+						if imgui.BeginTabItem(fa.BARS..u8' Дополнительные функции') then 
 						
-						imgui.EndTabItem() 
+							if imgui.BeginChild('##99', imgui.ImVec2(589 * MONET_DPI_SCALE, 333 * MONET_DPI_SCALE), true) then
+
+								if isMonetLoader() then
+									imgui.Text(u8'Открыть быстрое меню взаимодействия с игроком:')
+									imgui.Text(u8'Подойдите к игроку и нажмите на кнопку "Взаимодействие" в левом углу ')
+								else
+		
+									imgui.CenterText(fa.KEYBOARD .. u8' Бинды')
+									imgui.Separator()
+
+									imgui.CenterText(u8'Открытие главного меню хелпера (аналог /hh):')
+									imgui.SetCursorPosX( imgui.GetWindowWidth() / 2 )
+									if MainMenuHotKey:ShowHotKey() then
+										settings.general.bind_mainmenu = encodeJson(MainMenuHotKey:GetHotKey())
+										save_settings()
+									end
+		
+									imgui.Separator()
+		
+									imgui.CenterText(u8'Открытие быстрого меню взаимодействия с игроком (аналог /hm):')
+									imgui.CenterText(u8'Навестись на игрока через ПКМ и нажать')
+									imgui.SetCursorPosX( imgui.GetWindowWidth() / 2 )
+									if FastMenuHotKey:ShowHotKey() then
+										settings.general.bind_fastmenu = encodeJson(FastMenuHotKey:GetHotKey())
+										save_settings()
+									end
+		
+									imgui.Separator()
+		
+									imgui.CenterText(u8'Открытие быстрого меню управления игроком (аналог /hlm):')
+									imgui.CenterText(u8'Навестись на игрока через ПКМ и нажать')
+									imgui.SetCursorPosX( imgui.GetWindowWidth() / 2 )
+									if LeaderFastMenuHotKey:ShowHotKey() then
+										settings.general.bind_leader_fastmenu = encodeJson(LeaderFastMenuHotKey:GetHotKey())
+										save_settings()
+									end
+		
+									imgui.Separator()
+		
+									imgui.CenterText(u8'Вылечить самого себя (аналог /hme):')
+									imgui.SetCursorPosX( imgui.GetWindowWidth() / 2 )
+									if HealMeHotKey:ShowHotKey() then
+										settings.general.bind_healme = encodeJson(HealMeHotKey:GetHotKey())
+										save_settings()
+									end
+
+									imgui.Separator()
+		
+									imgui.CenterText(u8'Вылечить игрока (бинд для функции "Хил из чата"):')
+									imgui.SetCursorPosX( imgui.GetWindowWidth() / 2 )
+									if FastHealHotKey:ShowHotKey() then
+										settings.general.bind_fastheal = encodeJson(FastHealHotKey:GetHotKey())
+										save_settings()
+									end
+		
+									
+		
+								end
+
+								imgui.EndChild()
+							end
+
+							
+							imgui.EndTabItem() 
+						end
+						imgui.EndTabBar() 
 					end
-				
-				
-					imgui.EndTabBar() 
-					
 				end
-				
 				imgui.EndTabItem()
-				
 			end
-			
 			if imgui.BeginTabItem(fa.MONEY_CHECK_DOLLAR..u8' Ценовая политика') then 
-				
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
 				if imgui.InputText(u8'  Лечение игрока (SA $)', input_heal, 6) then
 					settings.price.heal = u8:decode(ffi.string(input_heal))
 					save_settings()
 				end
-				
 				imgui.SameLine()
-				
 				imgui.SetCursorPosX(300 * MONET_DPI_SCALE)
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
 				if imgui.InputText(u8'  Лечение игрока (VC $)', input_heal_vc, 6) then
 					settings.price.heal_vc = u8:decode(ffi.string(input_heal_vc))
 					save_settings()
 				end
-				
 				imgui.Separator()
-				
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
 				if imgui.InputText(u8'  Лечение охранника (SA $)', input_healactor, 8) then
 					settings.price.healactor = u8:decode(ffi.string(input_healactor))
 					save_settings()
 				end
-				
 				imgui.SameLine()
 				imgui.SetCursorPosX(300 * MONET_DPI_SCALE)
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
@@ -2287,311 +2381,220 @@ local MainWindow = imgui.OnFrame(
 					settings.price.healactor_vc = u8:decode(ffi.string(input_healactor_vc))
 					save_settings()
 				end
-				
 				imgui.Separator()
-				
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
 				if imgui.InputText(u8'  Проведение мед. осмотра для пилотов', input_medosm, 8) then
 					settings.price.medosm = u8:decode(ffi.string(input_medosm))
 					save_settings()
 				end
-				
 				imgui.Separator()
-				
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
 				if imgui.InputText(u8'  Проведение мед. обследования для военного билета', input_mticket, 8) then
 					settings.price.mticket = u8:decode(ffi.string(input_mticket))
 					save_settings()
 				end
-				
 				imgui.Separator()
-				
+				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
+				if imgui.InputText(u8'  Проведение сеанса сведения татуировки', input_tatu, 8) then
+					settings.price.tatu = u8:decode(ffi.string(input_tatu))
+					save_settings()
+				end
+				imgui.Separator()
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
 				if imgui.InputText(u8'  Выдача рецепта', input_recept, 8) then
 					settings.price.recept = u8:decode(ffi.string(input_recept))
 					save_settings()
 				end
-				
 				imgui.Separator()
-				
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
 				if imgui.InputText(u8'  Выдача антибиотика', input_ant, 8) then
 					settings.price.ant = u8:decode(ffi.string(input_ant))
 					save_settings()
 				end
-				
 				imgui.Separator()
-				
-				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
-				if imgui.InputText(u8'  Сведение татуировки', input_tatu, 8) then
-					settings.price.tatu = u8:decode(ffi.string(input_tatu))
-					save_settings()
-				end
-				
-				imgui.Separator()
-				
-				
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
 				if imgui.InputText(u8'  Выдача мед.карты на 7 дней', input_med7, 8) then
 					settings.price.med7 = u8:decode(ffi.string(input_med7))
 					save_settings()
 				end
-				
-			
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
 				if imgui.InputText(u8'  Выдача мед.карты на 14 дней', input_med14, 8) then
 					settings.price.med14 = u8:decode(ffi.string(input_med14))
 					save_settings()
 				end
-				
 				imgui.Separator()
-				
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
 				if imgui.InputText(u8'  Выдача мед.карты на 30 дней', input_med30, 8) then
 					settings.price.med30 = u8:decode(ffi.string(input_med30))
 					save_settings()
 				end
-				
 				imgui.Separator()
-				
 				imgui.PushItemWidth(65 * MONET_DPI_SCALE)
 				if imgui.InputText(u8'  Выдача мед.карты на 60 дней', input_med60, 8) then
 					settings.price.med60 = u8:decode(ffi.string(input_med60))
 					save_settings()
 				end
-
-				
-
 			imgui.EndTabItem()
 			end
-			
 			if imgui.BeginTabItem(fa.FILE_PEN..u8' Заметки') then 
-	
 				if imgui.BeginChild('##1', imgui.ImVec2(589 * MONET_DPI_SCALE, 330 * MONET_DPI_SCALE), true) then
-	
 					imgui.Columns(2)
 					imgui.CenterColumnText(u8"Список всех ваших заметок:")
 					imgui.SetColumnWidth(-1, 500 * MONET_DPI_SCALE)
 					imgui.NextColumn()
 					imgui.CenterColumnText(u8"Действие")
-					imgui.SetColumnWidth(-1, 100 * MONET_DPI_SCALE)
-					
+					imgui.SetColumnWidth(-1, 120 * MONET_DPI_SCALE)
 					imgui.Columns(1)
-					
 					imgui.Separator()
-					
 					for i, note in ipairs(settings.note) do
-				
 						imgui.Columns(2)
-						
 						imgui.CenterColumnText(u8(note.note_name))
-						
 						imgui.NextColumn()
-						
-						if imgui.CenterColumnSmallButton(fa.PEN_TO_SQUARE .. '##' .. i) then
+						if imgui.SmallButton(fa.UP_RIGHT_FROM_SQUARE .. '##' .. i) then
+							show_note_name = u8(note.note_name)
+							show_note_text = u8(note.note_text)
+							NoteWindow[0] = true
+						end
+						if imgui.IsItemHovered() then
+							imgui.SetTooltip(u8'Открыть заметку "' .. u8(note.note_name) .. '"')
+						end
+						imgui.SameLine()
+						if imgui.SmallButton(fa.PEN_TO_SQUARE .. '##' .. i) then
 							local note_text = note.note_text:gsub('&','\n')
-							input_text_note = new.char[8192](u8(note_text))
-							input_name_note = new.char[256](u8(note.note_name))
+							input_text_note = imgui.new.char[8192](u8(note_text))
+							input_name_note = imgui.new.char[256](u8(note.note_name))
 							imgui.OpenPopup(fa.PEN_TO_SQUARE .. u8' Изменение заметки' .. '##' .. i)	
 						end
 						if imgui.IsItemHovered() then
 							imgui.SetTooltip(u8'Редактирование заметки "' .. u8(note.note_name) .. '"')
 						end
-						if imgui.BeginPopupModal(fa.PEN_TO_SQUARE .. u8' Изменение заметки' .. '##' .. i, _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoResize ) then
-								
-							if imgui.BeginChild('##9992', imgui.ImVec2(589 * MONET_DPI_SCALE, 360 * MONET_DPI_SCALE), true) then
-								
+						if imgui.BeginPopupModal(fa.PEN_TO_SQUARE .. u8' Изменение заметки' .. '##' .. i, _, imgui.WindowFlags.NoCollapse  + imgui.WindowFlags.NoResize ) then
+							if imgui.BeginChild('##9992', imgui.ImVec2(589 * MONET_DPI_SCALE, 360 * MONET_DPI_SCALE), true) then	
 								imgui.PushItemWidth(578 * MONET_DPI_SCALE)
-								if imgui.InputText(u8'##note_name', input_name_note, 256) then
-									
-									note.note_name = u8:decode(ffi.string(input_name_note))
-									save_settings()
-									
-									
-								end
-								
-								if imgui.InputTextMultiline("##note_text", input_text_note, 8192, imgui.ImVec2(578 * MONET_DPI_SCALE, 320 * MONET_DPI_SCALE)) then
-					
-									local input_text_string = u8:decode(ffi.string(input_text_note))
-									note.note_text = input_text_string:gsub('\n', '&')
-									save_settings()
-								
-								end
-									
-									
+								imgui.InputText(u8'##note_name', input_name_note, 256)
+								imgui.InputTextMultiline("##note_text", input_text_note, 8192, imgui.ImVec2(578 * MONET_DPI_SCALE, 320 * MONET_DPI_SCALE))
 								imgui.EndChild()
-						
 							end	
-								
-							if imgui.Button(u8'Закрыть',  imgui.ImVec2(imgui.GetMiddleButtonX(1), 0)) then
+							if imgui.Button(fa.CIRCLE_XMARK .. u8' Отмена', imgui.ImVec2(imgui.GetMiddleButtonX(2), 0)) then
 								imgui.CloseCurrentPopup()
 							end
-							
+							imgui.SameLine()
+							if imgui.Button(fa.FLOPPY_DISK .. u8' Сохранить', imgui.ImVec2(imgui.GetMiddleButtonX(2), 0)) then
+								note.note_name = u8:decode(ffi.string(input_name_note))
+								local temp = u8:decode(ffi.string(input_text_note))
+								note.note_text = temp:gsub('\n', '&')
+								save_settings()
+								imgui.CloseCurrentPopup()
+							end
 							imgui.End()
 						end
-						
+						imgui.SameLine()
+						if imgui.SmallButton(fa.TRASH_CAN .. '##' .. i) then
+							imgui.OpenPopup(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##' .. note.note_name)
+						end
+						if imgui.IsItemHovered() then
+							imgui.SetTooltip(u8'Удаление заметки "' .. u8(note.note_name) .. '"')
+						end
+						if imgui.BeginPopupModal(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##' .. note.note_name, _, imgui.WindowFlags.NoResize ) then
+							imgui.CenterText(u8'Вы действительно хотите удалить заметку "' .. u8(note.note_name) .. '" ?')
+							imgui.Separator()
+							if imgui.Button(fa.CIRCLE_XMARK .. u8' Нет, отменить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+								imgui.CloseCurrentPopup()
+							end
+							imgui.SameLine()
+							if imgui.Button(fa.TRASH_CAN .. u8' Да, удалить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+								table.remove(settings.note, i)
+								save_settings()
+								imgui.CloseCurrentPopup()
+							end
+							imgui.End()
+						end
 						imgui.Columns(1)
 						imgui.Separator()
-					
 					end
-				
 					imgui.EndChild()
-	
 				end
 				
 				if imgui.Button(fa.CIRCLE_PLUS .. u8' Создать новую заметку', imgui.ImVec2(imgui.GetMiddleButtonX(1), 0)) then
 							
-					local new_note = {note_name = 'Новая заметка', note_text = 'Новая заметка' }
+					local new_note = {note_name = 'Новая заметка', note_text = '' }
 
 					table.insert(settings.note, new_note)
-					
-					save_settings()
 					
 				end
 							
 					
 				imgui.EndTabItem()
 			end
-			
 			if imgui.BeginTabItem(fa.GEAR..u8' Настройки') then 
-			
 				if imgui.BeginChild('##1', imgui.ImVec2(589 * MONET_DPI_SCALE, 145 * MONET_DPI_SCALE), true) then
-
 					imgui.CenterText(fa.CIRCLE_INFO .. u8' Дополнительная информация про хелпер')
 					imgui.Separator()
-			
 					imgui.Text(fa.CIRCLE_USER..u8" Разработчик данного хелпера: MTG MODS")
 					imgui.Separator()
-
 					imgui.Text(fa.CODE..u8" Благодарность за помощь в разработке: OSPx & Dobrui Kola")
-					
 					imgui.Separator()
-					
 					imgui.Text(fa.CIRCLE_INFO..u8" Версия хелпера которая сейчас установлена у вас: "..thisScript().version)
-					--[[imgui.SameLine()
-					if imgui.SmallButton(u8'Проверить наличие обновлений') then
-						
-					end]]
-					
 					imgui.Separator()
-					
 					imgui.Text(fa.HEADSET..u8" Тех.поддержка по хелперу (баги, предложения):")
 					imgui.SameLine()
 					if imgui.SmallButton('https://discord.com/invite/qBPEYjfNhv') then
 						openLink('https://discord.com/invite/qBPEYjfNhv')
 					end
-					
 					imgui.Separator()
-					
 					imgui.Text(fa.GLOBE..u8" Тема хелпера на форуме BlastHack:")
 					imgui.SameLine()
 					if imgui.SmallButton('https://www.blast.hk/threads/195388') then
 						openLink('https://www.blast.hk/threads/195388')
 					end
-					
-					--imgui.Separator()
-
 				imgui.EndChild()
 				end
-		
-				if imgui.BeginChild('##2', imgui.ImVec2(589 * MONET_DPI_SCALE, 140 * MONET_DPI_SCALE), true) then
-
-					--[[imgui.CenterText(fa.CLOCK .. u8' Задержка между сообщениями в командах: ' .. math.floor(settings.waiting.my_wait * 1000) .. ' ' .. u8("мс (" .. math.floor(settings.waiting.my_wait) .. " сек.)" ))
-					
-					local width = imgui.GetWindowWidth()
-					local calc = imgui.CalcTextSize(u8' Изменить задержку ')
-					imgui.SetCursorPosX( width / 2 - calc.x / 2 )
-
-
-					if imgui.Button(u8' Изменить задержку ##change_waiting') then
-						imgui.OpenPopup(fa.CLOCK .. u8' Задержка (мс) ')
-					end
-					if imgui.BeginPopupModal(fa.CLOCK .. u8' Задержка (мс) ', _, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove) then
-						imgui.PushItemWidth(150 * MONET_DPI_SCALE)
-						imgui.SliderFloat(u8'##waiting', slider, 1, 3)
-
-						if imgui.Button(u8'Сохранить', imgui.ImVec2(imgui.GetMiddleButtonX(1), 0)) then
-							settings.waiting.my_wait = slider[0]
-							save_settings()
-							imgui.CloseCurrentPopup()
-						end
-						imgui.End()
-					end
-					
-					imgui.Separator()]]
-
+				if imgui.BeginChild('##2', imgui.ImVec2(589 * MONET_DPI_SCALE, 87 * MONET_DPI_SCALE), true) then
 					imgui.CenterText(fa.PALETTE .. u8' Цветовая тема хелпера:')
-
-					if imgui.RadioButtonIntPtr(u8" Dark Theme ", theme, 0) then
-						
+					imgui.Separator()
+					if imgui.RadioButtonIntPtr(u8" Dark Theme ", theme, 0) then	
 						theme[0] = 0
-						
 						settings.general.moonmonet_theme_enable = false
 						settings.general.message_color = 0xFF7E7E
 						settings.general.message_color_hex = '{FF7E7E}'
-						save_settings()
-						
 						message_color = settings.general.message_color 
 						message_color_hex = settings.general.message_color_hex
-						
 						apply_dark_theme()
-						
+						save_settings()
 					end
-					
-				
-
-					if monet_check_errors then
-
+					if monet_no_errors then
 						if imgui.RadioButtonIntPtr(u8" MoonMonet Theme ", theme, 1) then
-						
-							
 							theme[0] = 1
-							
 							local r,g,b = mmcolor[0] * 255, mmcolor[1] * 255, mmcolor[2] * 255
 							local argb = join_argb(0, r, g, b)
-							
 							settings.general.moonmonet_theme_enable = true
 							settings.general.moonmonet_theme_color = argb
 							settings.general.message_color = "0x" .. argbToHexWithoutAlpha(0, r, g, b)
 							settings.general.message_color_hex = '{' .. argbToHexWithoutAlpha(0, r, g, b) .. '}'
-							save_settings()
-							
 							message_color = settings.general.message_color 
 							message_color_hex = settings.general.message_color_hex
-							
 							apply_moonmonet_theme()
-							
+							save_settings()
 						end
-						
 						imgui.SameLine()
-
 						if theme[0] == 1 and imgui.ColorEdit3('## COLOR', mmcolor, imgui.ColorEditFlags.NoInputs) then
-						
 							local r,g,b = mmcolor[0] * 255, mmcolor[1] * 255, mmcolor[2] * 255
 							local argb = join_argb(0, r, g, b)
-							
-							
-							
 							settings.general.message_color = "0x" .. argbToHexWithoutAlpha(0, r, g, b)
 							settings.general.message_color_hex = '{' .. argbToHexWithoutAlpha(0, r, g, b) .. '}'
 							settings.general.moonmonet_theme_color = argb
-							
 							message_color = settings.general.message_color 
 							message_color_hex = settings.general.message_color_hex
-							
-							save_settings()
-							
-							
 							if theme[0] == 1 then
 								apply_moonmonet_theme()
+								save_settings()
 							end
-							
 						end
 
 					
 					else
 					
-						if imgui.RadioButtonIntPtr(u8" MoonMonet Theme "..fa.TRIANGLE_EXCLAMATION .. u8' Ошибка Lib, используйте Dark Theme', theme, 1) then
+						if imgui.RadioButtonIntPtr(u8" MoonMonet Theme | "..fa.TRIANGLE_EXCLAMATION .. u8' Ошибка: отсуствуют файлы библиотеки!', theme, 1) then
 							theme[0] = 0
 						end
 						
@@ -2606,58 +2609,83 @@ local MainWindow = imgui.OnFrame(
 
 				imgui.EndChild()
 				end
-
-				if imgui.BeginChild("##3",imgui.ImVec2(589 * MONET_DPI_SCALE, 65 * MONET_DPI_SCALE),true) then
+				if imgui.BeginChild("##3",imgui.ImVec2(589 * MONET_DPI_SCALE, 80 * MONET_DPI_SCALE),true) then
 					
-					
-				
-					if imgui.Button(u8" Сброс абсолютно всех настроек и команд хелпера к стандартным параметрам ", imgui.ImVec2(580 * MONET_DPI_SCALE, 55 * MONET_DPI_SCALE)) then
-						imgui.OpenPopup(fa.TRIANGLE_EXCLAMATION .. u8' Вы уверены? ')
+				end imgui.EndChild()
+				if imgui.BeginChild("##4",imgui.ImVec2(589 * MONET_DPI_SCALE, 35 * MONET_DPI_SCALE),true) then
+					if imgui.Button(fa.POWER_OFF .. u8" Выгрузить хелпер ", imgui.ImVec2(imgui.GetMiddleButtonX(3), 25 * MONET_DPI_SCALE)) then
+						imgui.OpenPopup(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##off')
 					end
-					if imgui.BeginPopupModal(fa.TRIANGLE_EXCLAMATION .. u8' Вы уверены? ', _, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove) then
-						
-						if imgui.Button(u8'Нет, отменить', imgui.ImVec2(100 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+					if imgui.BeginPopupModal(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##off', _, imgui.WindowFlags.NoResize ) then
+						imgui.CenterText(u8'Вы действительно хотите выгрузить (отключить) хелпер?')
+						imgui.Separator()
+						if imgui.Button(fa.CIRCLE_XMARK .. u8' Нет, отменить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
 							imgui.CloseCurrentPopup()
 						end
-						
 						imgui.SameLine()
-						
-						if imgui.Button(u8'Да, сбросить', imgui.ImVec2(100 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+						if imgui.Button(fa.POWER_OFF .. u8' Да, выгрузить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+							reload_script = true
+							sampAddChatMessage('[Hospital Helper] {ffffff}Хелпер приостановил свою работу до следущего входа в игру!', message_color)
+							thisScript():unload()
+						end
+						imgui.End()
+					end
+					imgui.SameLine()
+					if imgui.Button(fa.CLOCK_ROTATE_LEFT .. u8" Сброс настроек хелпера ", imgui.ImVec2(imgui.GetMiddleButtonX(3), 25 * MONET_DPI_SCALE)) then
+						imgui.OpenPopup(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##reset')
+					end
+					if imgui.BeginPopupModal(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##reset', _, imgui.WindowFlags.NoResize ) then
+						imgui.CenterText(u8'Вы действительно хотите сбросить все настройки хелпера?')
+						imgui.Separator()
+						if imgui.Button(fa.CIRCLE_XMARK .. u8' Нет, отменить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+							imgui.CloseCurrentPopup()
+						end
+						imgui.SameLine()
+						if imgui.Button(fa.CLOCK_ROTATE_LEFT .. u8' Да, сбросить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
 							settings = default_settings
 							save_settings()
 							imgui.CloseCurrentPopup()
 							reload_script = true
 							thisScript():reload()
 						end
-						
 						imgui.End()
 					end
-					
-					
-					
-					
-				
-					
-					
+					imgui.SameLine()
+					if imgui.Button(fa.TRASH_CAN .. u8" Удалить хелпер ", imgui.ImVec2(imgui.GetMiddleButtonX(3), 25 * MONET_DPI_SCALE)) then
+						imgui.OpenPopup(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##delete')
+					end
+					if imgui.BeginPopupModal(fa.TRIANGLE_EXCLAMATION .. u8' Предупреждение ##delete', _, imgui.WindowFlags.NoResize ) then
+						imgui.CenterText(u8'Вы действительно хотите удалить Hospital Helper?')
+						imgui.Separator()
+						if imgui.Button(fa.CIRCLE_XMARK .. u8' Нет, отменить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+							imgui.CloseCurrentPopup()
+						end
+						imgui.SameLine()
+						if imgui.Button(fa.TRASH_CAN .. u8' Да, я хочу удалить', imgui.ImVec2(200 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+							sampAddChatMessage('[Hospital Helper] {ffffff}Хелпер полностю удалён из вашего устройства!', message_color)
+							sampShowDialog(999999, message_color_hex .. "Hospital Helper", "Мне очень жаль что вы удалили Hospital Helper из своего устройства.\nЕсли удаление связано с негативным опытом использования, и вы сталкивались с багами или проблемами, то\nсообщите мне что именно заставило вас удалить хелпер на нашем Discord сервере или на форуме BlastHack\n\nDiscord: https://discord.com/invite/qBPEYjfNhv\nBlastHack: https://www.blast.hk/threads/195388/\n\nЕсли что, вы можете заново скачать и установить хелпер в любой момент :)", "Закрыть", '', 0)
+							os.remove(getWorkingDirectory() .. "\\Hospital_Helper.lua")
+							os.remove(getWorkingDirectory() .. "\\config\\Hospital_Helper_Settings.json")
+							reload_script = true
+							thisScript():unload()
+						end
+						imgui.End()
+					end
 				end imgui.EndChild()
-
 				imgui.EndTabItem()
 			end
-		
 		imgui.EndTabBar() end
-		
 		imgui.End()
-		
     end
 )
 
-local MedCardMenu = imgui.OnFrame(
+imgui.OnFrame(
     function() return MedCardMenu[0] end,
     function(player)
 	
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY - 100  * MONET_DPI_SCALE), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(340 * MONET_DPI_SCALE, 115 * MONET_DPI_SCALE), imgui.Cond.FirstUseEver)
-		imgui.Begin(fa.HOSPITAL.." Hospital Helper##med", MedCardMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoScrollbar )
+		imgui.Begin(fa.HOSPITAL.." Hospital Helper##med", MedCardMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  + imgui.WindowFlags.NoScrollbar )
 		
 		
 		imgui.CenterText(u8'Мед.карта для игрока '..sampGetPlayerNickname(player_id))
@@ -2721,14 +2749,14 @@ local MedCardMenu = imgui.OnFrame(
     end
 )
 
-local ReceptMenu = imgui.OnFrame(
+imgui.OnFrame(
     function() return ReceptMenu[0] end,
     function(player)
 	
 
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY - 100  * MONET_DPI_SCALE), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(340 * MONET_DPI_SCALE, 130 * MONET_DPI_SCALE), imgui.Cond.FirstUseEver)
-		imgui.Begin(fa.HOSPITAL.." Hospital Helper##recept", ReceptMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoScrollbar )
+		imgui.Begin(fa.HOSPITAL.." Hospital Helper##recept", ReceptMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  + imgui.WindowFlags.NoScrollbar )
 
 		
         imgui.CenterText(u8'Рецепты для игрока '..sampGetPlayerNickname(player_id))
@@ -2800,13 +2828,13 @@ local ReceptMenu = imgui.OnFrame(
     end
 )
 
-local AntibiotikMenu = imgui.OnFrame(
+imgui.OnFrame(
     function() return AntibiotikMenu[0] end,
     function(player)
 	
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY - 100 * MONET_DPI_SCALE), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(340 * MONET_DPI_SCALE, 130 * MONET_DPI_SCALE), imgui.Cond.FirstUseEver)
-		imgui.Begin(fa.HOSPITAL.." Hospital Helper##ant", AntibiotikMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoScrollbar )
+		imgui.Begin(fa.HOSPITAL.." Hospital Helper##ant", AntibiotikMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  + imgui.WindowFlags.NoScrollbar )
 		
 		
 		imgui.CenterText(u8'Антибиотики для игрока '..sampGetPlayerNickname(player_id))
@@ -2844,7 +2872,7 @@ local AntibiotikMenu = imgui.OnFrame(
     end
 )
 
-local MedOsmotrMenu2 = imgui.OnFrame(
+imgui.OnFrame(
     function() return  MedOsmotrMenu2[0] end,
     function(player)
 	
@@ -2886,7 +2914,7 @@ local MedOsmotrMenu2 = imgui.OnFrame(
 		
     end
 )
-local MedOsmotrMenu3 = imgui.OnFrame(
+imgui.OnFrame(
     function() return  MedOsmotrMenu3[0] end,
     function(player)
 	
@@ -2962,7 +2990,7 @@ local MedOsmotrMenu3 = imgui.OnFrame(
 		
     end
 )
-local MedOsmotrMenu4 = imgui.OnFrame(
+imgui.OnFrame(
     function() return  MedOsmotrMenu4[0] end,
     function(player)
 	
@@ -3005,8 +3033,8 @@ local MedOsmotrMenu4 = imgui.OnFrame(
 		
     end
 )
-local MedOsmotrMenu5 = imgui.OnFrame(
-    function() return  MedOsmotrMenu5[0] end,
+imgui.OnFrame(
+    function() return MedOsmotrMenu5[0] end,
     function(player)
 	
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY - (100 * MONET_DPI_SCALE)), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
@@ -3068,120 +3096,69 @@ local MedOsmotrMenu5 = imgui.OnFrame(
     end
 )
 
-local binder_tags_text = [[
-{my_id} - Ваш игровой ID
-{my_nick} - Ваш игровой Nick
-{my_ru_nick} - Ваше Имя и Фамилия указанные в хелпере
-{fraction} - Ваша фракция указанная в хелпере
-{fraction_tag} - Ваш фракционнфый тэг указанный в хелпере
-{fraction_rank} - Название вашего фракционного ранга в хелпере
-{expel_reason} - Причина для выгона из хелпера
-{price_heal} - Цена лечения пациентов
-{price_actorheal} - Цена лечения охранников
-{price_medosm} - Цена мед.осмотра для пилота
-{price_tatu} - Цена удаления татуировки
-{price_mticket} - Цена обследования военного билета
-{price_ant} - Цена антибиотика
-{price_recept} - Цена рецепта
-{price_med7} - Цена медккарты на 7 дней
-{price_med14} - Цена медккарты на 14 дней
-{price_med30} - Цена медккарты на 30 дней
-{price_med60} - Цена медккарты на 60 дней
-
-{sex} - Добавляет букву "а" если в хелпере указан женский пол
-
-{get_nick({arg_id})} - получить Nick игрока из аргумента ID игрока
-{get_rp_nick({arg_id})}  - получить Nick игрока без символа _ из аргумента ID игрока
-{get_ru_nick({arg_id})}  - получить Nick игрока на кирилице из аргумента ID игрока ]]
-
-local BinderWindow = imgui.OnFrame(
+imgui.OnFrame(
     function() return BinderWindow[0] end,
     function(player)
 	
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(600 * MONET_DPI_SCALE, 425	* MONET_DPI_SCALE), imgui.Cond.FirstUseEver)
-		
-		imgui.Begin(fa.PEN_TO_SQUARE .. u8' Редактирование команды /' .. change_cmd, BinderWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove )
-		
+		imgui.Begin(fa.PEN_TO_SQUARE .. u8' Редактирование команды /' .. change_cmd, BinderWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  )
 		if imgui.BeginChild('##binder_edit', imgui.ImVec2(589 * MONET_DPI_SCALE, 361 * MONET_DPI_SCALE), true) then
-		
 			imgui.CenterText(fa.FILE_LINES .. u8' Описание команды:')
 			imgui.PushItemWidth(579 * MONET_DPI_SCALE)
 			imgui.InputText("##input_description", input_description, 256)
-			
 			imgui.Separator()
-			
 			imgui.CenterText(fa.TERMINAL .. u8' Команда для использования в чате (без /):')
 			imgui.PushItemWidth(579 * MONET_DPI_SCALE)
 			imgui.InputText("##input_cmd", input_cmd, 256)
-			
 			imgui.Separator()
-			
 			imgui.CenterText(fa.CODE .. u8' Аргументы которые принимает команда:')
 	    	imgui.Combo(u8'',ComboTags, ImItems, #item_list)
-		
 	 	    imgui.Separator()
-	
 	        imgui.CenterText(fa.FILE_WORD .. u8' Текстовый бинд команды:')
 		    if imgui.InputTextMultiline("##text_multiple", input_text, 8192, imgui.ImVec2(579 * MONET_DPI_SCALE, 173 * MONET_DPI_SCALE)) then
 				input_text_string = u8:decode(ffi.string(input_text))
 				input_text_string = input_text_string:gsub('\n', '&')
 			end
-			
 		imgui.EndChild() end
-
 		if imgui.Button(fa.CIRCLE_XMARK .. u8' Отмена', imgui.ImVec2(imgui.GetMiddleButtonX(4), 0)) then
 			BinderWindow[0] = false
 		end
 		imgui.SameLine()
-		
-		
-		
 		if imgui.Button(fa.CLOCK .. u8' Изменить задержку',imgui.ImVec2(imgui.GetMiddleButtonX(4), 0)) then
 			imgui.OpenPopup(fa.CLOCK .. u8' Задержка (мс) ')
 		end
 		if imgui.BeginPopupModal(fa.CLOCK .. u8' Задержка (мс) ', _, imgui.WindowFlags.NoResize ) then
 			imgui.PushItemWidth(200 * MONET_DPI_SCALE)
-			imgui.SliderFloat(u8'##waiting', slider, 1, 3)
-
+			imgui.SliderFloat(u8'##waiting', waiting_slider, 1, 3)
+			imgui.Separator()
 			if imgui.Button(fa.CIRCLE_XMARK .. u8' Отмена', imgui.ImVec2(imgui.GetMiddleButtonX(2), 0)) then
 				imgui.CloseCurrentPopup()
 			end
-		
 			imgui.SameLine()
-
 			if imgui.Button(fa.FLOPPY_DISK .. u8' Сохранить', imgui.ImVec2(imgui.GetMiddleButtonX(2), 0)) then
-				
 				imgui.CloseCurrentPopup()
 			end
 			imgui.End()
 		end
-		
 		imgui.SameLine()
-		
 		if imgui.Button(fa.TAGS .. u8' Доступные тэги', imgui.ImVec2(imgui.GetMiddleButtonX(4), 0)) then
 			imgui.OpenPopup(fa.TAGS .. u8' Список всех доступных тэгов')
 		end
-		if imgui.BeginPopupModal(fa.TAGS .. u8' Список всех доступных тэгов', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoScrollbar ) then
+		if imgui.BeginPopupModal(fa.TAGS .. u8' Список всех доступных тэгов', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  + imgui.WindowFlags.NoScrollbar ) then
 			imgui.Text(u8(binder_tags_text))
 			imgui.Separator()
-			if imgui.Button(u8'Закрыть', imgui.ImVec2(500 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+			if imgui.Button(fa.CIRCLE_XMARK .. u8' Закрыть', imgui.ImVec2(500 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
 				imgui.CloseCurrentPopup()
 			end
 			imgui.End()
 		end
 		imgui.SameLine()
-
 		if imgui.Button(fa.FLOPPY_DISK .. u8' Сохранить', imgui.ImVec2(imgui.GetMiddleButtonX(4), 0)) then	
-			
 			if ffi.string(input_cmd):find('%W') or ffi.string(input_cmd) == '' or ffi.string(input_description) == '' or ffi.string(input_text) == '' then
-			
 				imgui.OpenPopup(fa.TRIANGLE_EXCLAMATION .. u8' Ошибка сохранения команды!')
-				
 			else
-			
 				local new_arg = ''
-			
 				if ComboTags[0] == 0 then
 					new_arg = ''
 				elseif ComboTags[0] == 1 then
@@ -3191,29 +3168,19 @@ local BinderWindow = imgui.OnFrame(
 				elseif ComboTags[0] == 3 then
 					new_arg = '{arg_id} {arg2}'
 				end
-				
-				
-				local new_waiting = slider[0]
+				local new_waiting = waiting_slider[0]
 				local new_description = u8:decode(ffi.string(input_description))
 				local new_command = u8:decode(ffi.string(input_cmd))
 				local new_text = u8:decode(ffi.string(input_text)):gsub('\n', '&')
-				
 				if binder_create_command_9_10 then
-				
 					for _, command in ipairs(settings.commands_manage) do
-
 						if command.cmd == change_cmd and command.description == change_description and command.arg == change_arg and command.text:gsub('&', '\n') == change_text then
-							
 							command.cmd = new_command
 							command.arg = new_arg
 							command.description = new_description
 							command.text = new_text
 							command.waiting = new_waiting
-							
 							save_settings()
-							
-							
-							
 							if command.arg == '' then
 								sampAddChatMessage('[Hospital Helper] {ffffff}Команда ' .. message_color_hex .. '/' .. new_command .. ' {ffffff}успешно сохранена!', message_color)
 							elseif command.arg == '{arg}' then
@@ -3223,10 +3190,7 @@ local BinderWindow = imgui.OnFrame(
 							elseif command.arg == '{arg_id} {arg2}' then
 								sampAddChatMessage('[Hospital Helper] {ffffff}Команда ' .. message_color_hex .. '/' .. new_command .. ' [ID игрока] [аргумент] {ffffff}успешно сохранена!', message_color)
 							end
-						
-							
 							sampUnregisterChatCommand(change_cmd)
-							
 							sampRegisterChatCommand(command.cmd, function(arg)
 				
 								local arg_check = false
@@ -3453,7 +3417,7 @@ local BinderWindow = imgui.OnFrame(
 			end
 			
 		end
-		if imgui.BeginPopupModal(fa.TRIANGLE_EXCLAMATION .. u8' Ошибка сохранения команды!', _, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove) then
+		if imgui.BeginPopupModal(fa.TRIANGLE_EXCLAMATION .. u8' Ошибка сохранения команды!', _, imgui.WindowFlags.AlwaysAutoResize ) then
 			
 			if ffi.string(input_cmd):find('%W') then
 				imgui.BulletText(u8" В команде можно использовать только англ. буквы и/или цифры!")
@@ -3468,8 +3432,8 @@ local BinderWindow = imgui.OnFrame(
 			if ffi.string(input_text) == '' then
 				imgui.BulletText(u8" Бинд команды не может быть пустой!")
 			end
-			
-			if imgui.Button(u8'Закрыть', imgui.ImVec2(500 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
+			imgui.Separator()
+			if imgui.Button(fa.CIRCLE_XMARK .. u8' Закрыть', imgui.ImVec2(300 * MONET_DPI_SCALE, 25 * MONET_DPI_SCALE)) then
 				imgui.CloseCurrentPopup()
 			end
 			
@@ -3482,7 +3446,7 @@ local BinderWindow = imgui.OnFrame(
     end
 )
 
-local MembersWindow = imgui.OnFrame(
+imgui.OnFrame(
     function() return MembersWindow[0] end,
     function(player)
 
@@ -3505,7 +3469,7 @@ local MembersWindow = imgui.OnFrame(
 			add = u8'сотрудников'
 		end
 		
-		imgui.Begin(fa.BUILDING_SHIELD .. " " ..  u8(members_fraction) .. " - " .. #members .. ' ' .. add .. u8' онлайн', MembersWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove )
+		imgui.Begin(fa.BUILDING_SHIELD .. " " ..  u8(members_fraction) .. " - " .. #members .. ' ' .. add .. u8' онлайн', MembersWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  )
 
 		
 		for i, v in ipairs(members) do
@@ -3541,13 +3505,27 @@ local MembersWindow = imgui.OnFrame(
     end
 )
 
-local FastMenuWindow = imgui.OnFrame(
+imgui.OnFrame(
+    function() return NoteWindow[0] end,
+    function(player)
+		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.Begin(fa.FILE_PEN .. ' '.. show_note_name, NoteWindow, imgui.WindowFlags.AlwaysAutoResize )
+		imgui.Text(show_note_text:gsub('&','\n'))
+		imgui.Separator()
+		if imgui.Button(fa.CIRCLE_XMARK .. u8' Закрыть', imgui.ImVec2(imgui.GetMiddleButtonX(1), 25 * MONET_DPI_SCALE)) then
+			NoteWindow[0] = false
+		end
+		imgui.End()
+    end
+)
+
+imgui.OnFrame(
     function() return FastMenu[0] end,
     function(player)
 	
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(300 * MONET_DPI_SCALE, 415 * MONET_DPI_SCALE), imgui.Cond.FirstUseEver)
-		imgui.Begin(fa.USER_INJURED..' '..sampGetPlayerNickname(player_id)..'['..player_id..']##FastMenu', FastMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove )
+		imgui.Begin(fa.USER_INJURED..' '..sampGetPlayerNickname(player_id)..'['..player_id..']##FastMenu', FastMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  )
 		
 		if imgui.Button(u8"Привествие",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
 			command("Здраствуйте", player_id)
@@ -3609,41 +3587,74 @@ local FastMenuWindow = imgui.OnFrame(
     end
 )
 
-local FastHealMenu = imgui.OnFrame(
-    function() return FastHealMenu[0] end,
+imgui.OnFrame(
+    function() return LeaderFastMenu[0] end,
     function(player)
 	
+		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		--imgui.SetNextWindowSize(imgui.ImVec2(300 * MONET_DPI_SCALE, 240 * MONET_DPI_SCALE), imgui.Cond.FirstUseEver)
+		imgui.Begin(fa.USER_INJURED..' '..sampGetPlayerNickname(player_id)..'['..player_id..']##LeaderFastMenu', LeaderFastMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize  )
 		
-	
-		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 8.5, sizeY / 1.9), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		if imgui.Button(u8"Принять в организацию",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+			command("/invite {arg_id}", player_id)
+			LeaderFastMenu[0] = false
+		end
 		
-		imgui.Begin(fa.HOSPITAL.." Hospital Helper##fast_heal", FastHealMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoTitleBar +  imgui.WindowFlags.AlwaysAutoResize )
-		
-	
-		
-		if imgui.Button(fa.KIT_MEDICAL..u8' Вылечить '..sampGetPlayerNickname(heal_in_chat_player_id)) then
-			command("/heal {arg_id}",heal_in_chat_player_id)
-			heal_in_chat = false
-			heal_in_chat_id = nil
-			FastHealMenu[0] = false
+		if imgui.Button(u8"Уволить из организации",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+			sampSetChatInputEnabled(true)
+			sampSetChatInputText('/uval '..player_id..' ')
+			LeaderFastMenu[0] = false
 		end
 	
+		if imgui.Button(u8"Выдать выговор",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+			sampSetChatInputEnabled(true)
+			sampSetChatInputText('/vig '..player_id..' ')
+			LeaderFastMenu[0] = false
+		end
+		
+		if imgui.Button(u8"Снять выговор",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+			command("/unfwarn {arg_id}", player_id)
+			LeaderFastMenu[0] = false
+		end
+		
+		if imgui.Button(u8"Изменить ранг",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+			sampSetChatInputEnabled(true)
+			sampSetChatInputText('/gr '..player_id..' ')
+			LeaderFastMenu[0] = false
+		end
+		
+		if imgui.Button(u8"Заглушить на 10 минут",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+			sampSetChatInputEnabled(true)
+			sampSetChatInputText('/fmutes '..player_id..' ')
+			LeaderFastMenu[0] = false
+		end
 		
 		imgui.End()
 		
     end
 )
 
-local FastMenuButton = imgui.OnFrame(
+imgui.OnFrame(
+    function() return FastHealMenu[0] end,
+    function(player)
+		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 8.5, sizeY / 1.9), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
+		imgui.Begin(fa.HOSPITAL.." Hospital Helper##fast_heal", FastHealMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoTitleBar +  imgui.WindowFlags.AlwaysAutoResize )
+		if imgui.Button(fa.KIT_MEDICAL..u8' Вылечить '..sampGetPlayerNickname(heal_in_chat_player_id)) then
+			command("/heal {arg_id}",heal_in_chat_player_id)
+			heal_in_chat = false
+			heal_in_chat_id = nil
+			FastHealMenu[0] = false
+		end
+		imgui.End()
+    end
+)
+
+imgui.OnFrame(
     function() return FastMenuButton[0] end,
     function(player)
-	
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 8.5, sizeY / 2.3), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		
-		imgui.Begin(fa.HOSPITAL.." Hospital Helper##fast_menu_button", FastMenuButton, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoTitleBar  )
-		
+		imgui.Begin(fa.HOSPITAL.." Hospital Helper##fast_menu_button", FastMenuButton, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoTitleBar  )
 		if imgui.Button(fa.IMAGE_PORTRAIT..u8' Взаимодействие ') then
-			
 			if tonumber(#get_players()) == 1 then
 				show_fast_menu(get_players()[1])
 				FastMenuButton[0] = false
@@ -3651,22 +3662,16 @@ local FastMenuButton = imgui.OnFrame(
 				FastMenuPlayers[0] = true
 				FastMenuButton[0] = false
 			end
-			
 		end
-	
 		imgui.End()
-		
     end
 )
 
-local FastMenuPlayers = imgui.OnFrame(
+imgui.OnFrame(
     function() return FastMenuPlayers[0] end,
     function(player)
-	
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		
 		imgui.Begin(fa.HOSPITAL..u8" Выберите игрока##fast_menu_players", FastMenuPlayers, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize  )
-		
 		if tonumber(#get_players()) == 0 then
 			show_fast_menu(get_players()[1])
 			FastMenuPlayers[0] = false
@@ -3679,9 +3684,7 @@ local FastMenuPlayers = imgui.OnFrame(
 				end
 			end
 		end
-
 		imgui.End()
-		
     end
 )
 
@@ -3702,24 +3705,6 @@ end
 function imgui.CenterColumnColorText(imgui_RGBA, text)
     imgui.SetCursorPosX((imgui.GetColumnOffset() + (imgui.GetColumnWidth() / 2)) - imgui.CalcTextSize(text).x / 2)
 	imgui.TextColored(imgui_RGBA, text)
-end
-function imgui.CenterColumnInputText(text,v,size)
-
-	if text:find('^(.+)##(.+)') then
-		local text1, text2 = text:match('(.+)##(.+)')
-		imgui.SetCursorPosX((imgui.GetColumnOffset() + (imgui.GetColumnWidth() / 2)) - (imgui.CalcTextSize(text1).x / 2) - (imgui.CalcTextSize(v).x / 2 ))
-	elseif text:find('^##(.+)') then
-		imgui.SetCursorPosX((imgui.GetColumnOffset() + (imgui.GetColumnWidth() / 2) ) - (imgui.CalcTextSize(v).x / 2 ) )
-	else
-		imgui.SetCursorPosX((imgui.GetColumnOffset() + (imgui.GetColumnWidth() / 2)) - (imgui.CalcTextSize(text).x / 2) - (imgui.CalcTextSize(v).x / 2 ))
-	end   
-	
-	if imgui.InputText(text,v,size) then
-		return true
-	else
-		return false
-	end
-	
 end
 function imgui.CenterColumnButton(text)
 
@@ -3759,12 +3744,11 @@ function imgui.CenterTextDisabled(text)
     imgui.TextDisabled(text)
 end
 function imgui.GetMiddleButtonX(count)
-    local width = imgui.GetWindowContentRegionWidth() -- ширины контекста окно
+    local width = imgui.GetWindowContentRegionWidth() 
     local space = imgui.GetStyle().ItemSpacing.x
-    return count == 1 and width or width/count - ((space * (count-1)) / count) -- вернется средние ширины по количеству
+    return count == 1 and width or width/count - ((space * (count-1)) / count)
 end
 function apply_dark_theme()
-
 	imgui.SwitchContext()
     imgui.GetStyle().WindowPadding = imgui.ImVec2(5 * MONET_DPI_SCALE, 5 * MONET_DPI_SCALE)
     imgui.GetStyle().FramePadding = imgui.ImVec2(5 * MONET_DPI_SCALE, 5 * MONET_DPI_SCALE)
@@ -3789,7 +3773,6 @@ function apply_dark_theme()
     imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
     imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
     imgui.GetStyle().SelectableTextAlign = imgui.ImVec2(0.5, 0.5)
-    
     imgui.GetStyle().Colors[imgui.Col.Text]                   = imgui.ImVec4(1.00, 1.00, 1.00, 1.00)
     imgui.GetStyle().Colors[imgui.Col.TextDisabled]           = imgui.ImVec4(0.50, 0.50, 0.50, 1.00)
     imgui.GetStyle().Colors[imgui.Col.WindowBg]               = imgui.ImVec4(0.07, 0.07, 0.07, 1.00)
@@ -3838,14 +3821,10 @@ function apply_dark_theme()
     imgui.GetStyle().Colors[imgui.Col.NavWindowingHighlight]  = imgui.ImVec4(1.00, 1.00, 1.00, 0.70)
     imgui.GetStyle().Colors[imgui.Col.NavWindowingDimBg]      = imgui.ImVec4(0.80, 0.80, 0.80, 0.20)
     imgui.GetStyle().Colors[imgui.Col.ModalWindowDimBg]       = imgui.ImVec4(0.12, 0.12, 0.12, 0.95)
-	
-	
-	
 end
 function apply_moonmonet_theme()
-	
+	local generated_color = moon_monet.buildColors(settings.general.moonmonet_theme_color, 1.0, true)
 	imgui.SwitchContext()
-
 	imgui.GetStyle().WindowPadding = imgui.ImVec2(5 * MONET_DPI_SCALE, 5 * MONET_DPI_SCALE)
     imgui.GetStyle().FramePadding = imgui.ImVec2(5 * MONET_DPI_SCALE, 5 * MONET_DPI_SCALE)
     imgui.GetStyle().ItemSpacing = imgui.ImVec2(5 * MONET_DPI_SCALE, 5 * MONET_DPI_SCALE)
@@ -3869,62 +3848,55 @@ function apply_moonmonet_theme()
     imgui.GetStyle().WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
     imgui.GetStyle().ButtonTextAlign = imgui.ImVec2(0.5, 0.5)
     imgui.GetStyle().SelectableTextAlign = imgui.ImVec2(0.5, 0.5)
-
-	local style = imgui.GetStyle()
-	local colors = style.Colors
-	local clr = imgui.Col
-	local ImVec4 = imgui.ImVec4
-	local generated_color = monet.buildColors(settings.general.moonmonet_theme_color, 1.0, true)
-	colors[clr.Text] = ColorAccentsAdapter(generated_color.accent2.color_50):as_vec4()
-	colors[clr.TextDisabled] = ColorAccentsAdapter(generated_color.neutral1.color_600):as_vec4()
-	colors[clr.WindowBg] = ColorAccentsAdapter(generated_color.accent2.color_900):as_vec4()
-	colors[clr.ChildBg] = ColorAccentsAdapter(generated_color.accent2.color_800):as_vec4()
-	colors[clr.PopupBg] = ColorAccentsAdapter(generated_color.accent2.color_700):as_vec4()
-	colors[clr.Border] = ColorAccentsAdapter(generated_color.accent1.color_200):apply_alpha(0xcc):as_vec4()
-	colors[clr.Separator] = ColorAccentsAdapter(generated_color.accent1.color_200):apply_alpha(0xcc):as_vec4()
-	colors[clr.BorderShadow] = imgui.ImVec4(0.00, 0.00, 0.00, 0.00)
-	colors[clr.FrameBg] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x60):as_vec4()
-	colors[clr.FrameBgHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x70):as_vec4()
-	colors[clr.FrameBgActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x50):as_vec4()
-	colors[clr.TitleBg] = ColorAccentsAdapter(generated_color.accent2.color_700):apply_alpha(0xcc):as_vec4()
-	colors[clr.TitleBgCollapsed] = ColorAccentsAdapter(generated_color.accent2.color_700):apply_alpha(0x7f):as_vec4()
-	colors[clr.TitleBgActive] = ColorAccentsAdapter(generated_color.accent2.color_700):as_vec4()
-	colors[clr.MenuBarBg] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x91):as_vec4()
-	colors[clr.ScrollbarBg] = imgui.ImVec4(0,0,0,0)
-	colors[clr.ScrollbarGrab] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x85):as_vec4()
-	colors[clr.ScrollbarGrabHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
-	colors[clr.ScrollbarGrabActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xb3):as_vec4()
-	colors[clr.CheckMark] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xcc):as_vec4()
-	colors[clr.SliderGrab] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xcc):as_vec4()
-	colors[clr.SliderGrabActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x80):as_vec4()
-	colors[clr.Button] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xcc):as_vec4()
-	colors[clr.ButtonHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
-	colors[clr.ButtonActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xb3):as_vec4()
-	colors[clr.Tab] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xcc):as_vec4()
-	colors[clr.TabActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xb3):as_vec4()
-	colors[clr.TabHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
-	colors[clr.Header] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xcc):as_vec4()
-	colors[clr.HeaderHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
-	colors[clr.HeaderActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xb3):as_vec4()
-	colors[clr.ResizeGrip] = ColorAccentsAdapter(generated_color.accent2.color_700):apply_alpha(0xcc):as_vec4()
-	colors[clr.ResizeGripHovered] = ColorAccentsAdapter(generated_color.accent2.color_700):as_vec4()
-	colors[clr.ResizeGripActive] = ColorAccentsAdapter(generated_color.accent2.color_700):apply_alpha(0xb3):as_vec4()
-	colors[clr.PlotLines] = ColorAccentsAdapter(generated_color.accent2.color_600):as_vec4()
-	colors[clr.PlotLinesHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
-	colors[clr.PlotHistogram] = ColorAccentsAdapter(generated_color.accent2.color_600):as_vec4()
-	colors[clr.PlotHistogramHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
-	colors[clr.TextSelectedBg] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
-	colors[clr.ModalWindowDimBg] = ColorAccentsAdapter(generated_color.accent1.color_200):apply_alpha(0x99):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.Text] = ColorAccentsAdapter(generated_color.accent2.color_50):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.TextDisabled] = ColorAccentsAdapter(generated_color.neutral1.color_600):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.WindowBg] = ColorAccentsAdapter(generated_color.accent2.color_900):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.ChildBg] = ColorAccentsAdapter(generated_color.accent2.color_800):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.PopupBg] = ColorAccentsAdapter(generated_color.accent2.color_700):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.Border] = ColorAccentsAdapter(generated_color.accent1.color_200):apply_alpha(0xcc):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.Separator] = ColorAccentsAdapter(generated_color.accent1.color_200):apply_alpha(0xcc):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.BorderShadow] = imgui.ImVec4(0.00, 0.00, 0.00, 0.00)
+	imgui.GetStyle().Colors[imgui.Col.FrameBg] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x60):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.FrameBgHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x70):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.FrameBgActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x50):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.TitleBg] = ColorAccentsAdapter(generated_color.accent2.color_700):apply_alpha(0xcc):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.TitleBgCollapsed] = ColorAccentsAdapter(generated_color.accent2.color_700):apply_alpha(0x7f):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.TitleBgActive] = ColorAccentsAdapter(generated_color.accent2.color_700):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.MenuBarBg] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x91):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.ScrollbarBg] = imgui.ImVec4(0,0,0,0)
+	imgui.GetStyle().Colors[imgui.Col.ScrollbarGrab] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x85):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.ScrollbarGrabHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.ScrollbarGrabActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xb3):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.CheckMark] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xcc):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.SliderGrab] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xcc):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.SliderGrabActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0x80):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.Button] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xcc):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.ButtonHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.ButtonActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xb3):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.Tab] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xcc):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.TabActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xb3):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.TabHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.Header] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xcc):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.HeaderHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.HeaderActive] = ColorAccentsAdapter(generated_color.accent1.color_600):apply_alpha(0xb3):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.ResizeGrip] = ColorAccentsAdapter(generated_color.accent2.color_700):apply_alpha(0xcc):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.ResizeGripHovered] = ColorAccentsAdapter(generated_color.accent2.color_700):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.ResizeGripActive] = ColorAccentsAdapter(generated_color.accent2.color_700):apply_alpha(0xb3):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.PlotLines] = ColorAccentsAdapter(generated_color.accent2.color_600):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.PlotLinesHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.PlotHistogram] = ColorAccentsAdapter(generated_color.accent2.color_600):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.PlotHistogramHovered] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.TextSelectedBg] = ColorAccentsAdapter(generated_color.accent1.color_600):as_vec4()
+	imgui.GetStyle().Colors[imgui.Col.ModalWindowDimBg] = ColorAccentsAdapter(generated_color.accent1.color_200):apply_alpha(0x99):as_vec4()
 end
-
 function argbToHexWithoutAlpha(alpha, red, green, blue)
     return string.format("%02X%02X%02X", red, green, blue)
 end
 function join_argb(a, r, g, b)
-    local argb = b  -- b
-    argb = bit.bor(argb, bit.lshift(g, 8))  -- g
-    argb = bit.bor(argb, bit.lshift(r, 16)) -- r     
-    argb = bit.bor(argb, bit.lshift(a, 24)) -- a
+    local argb = b 
+    argb = bit.bor(argb, bit.lshift(g, 8))
+    argb = bit.bor(argb, bit.lshift(r, 16))    
+    argb = bit.bor(argb, bit.lshift(a, 24))
     return argb
 end
 function explode_argb(argb)
@@ -3965,28 +3937,13 @@ function ColorAccentsAdapter(color)
     end  
     return ret
 end
-function openLink(link)
-	
-	if isMonetLoader() then
-		gta._Z12AND_OpenLinkPKc(link)
-	else
-		os.execute("explorer " .. link)
-	end
-	
-end
 
 function onScriptTerminate(script, game_quit)
-
     if script == thisScript() and not game_quit and not reload_script then
-		
 		sampAddChatMessage('[Hospital Helper] {ffffff}Произошла неизвестная ошибка, хелпер приостановил свою работу!', message_color)
-		
 		if not isMonetLoader() then 
 			sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. 'CTRL {ffffff}+ ' .. message_color_hex .. 'R {ffffff}чтобы перезапустить хелпер.', message_color)
 		end
-		
 		play_error_sound()
-		
     end
-	
 end
