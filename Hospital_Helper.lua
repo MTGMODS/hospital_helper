@@ -3,7 +3,7 @@
 script_name("Hospital Helper")
 script_description('Cross-platform script helper for Medical Center')
 script_author("MTG MODS")
-script_version("3.1 Beta")
+script_version("3.1 Beta 2")
 script_properties("work-in-pause")
 
 require('lib.moonloader')
@@ -381,8 +381,9 @@ if not isMonetLoader() then
 
     
 	function IsHotkeyClicked(keys_id)
-		local keysArray = decodeJson(keys_id)
-		if next(keysArray) == nil then
+		local success, keysArray = pcall(decodeJson, keys_id)
+		if not success or next(keysArray) == nil then
+			sampAddChatMessage('[Hospital Helper] {ffffff}Произошла ошибка из Mimgui Hotkey!', message_color)
 			return false
 		end
 		local allKeysPressed = true
@@ -1452,8 +1453,8 @@ function fast_heal_in_chat(id)
 	else
 		sampAddChatMessage('[Hospital Helper] {ffffff}Чтобы вылечить игрока ' .. sampGetPlayerNickname(id) .. ' нажмите ' .. message_color_hex .. getNameKeysFrom(settings.general.bind_fastheal) .. ' {ffffff}в течении 5-ти секунд!',message_color)
 		heal_in_chat_player_id = id
+		heal_in_chat = true
 		lua_thread.create(function() 
-			heal_in_chat = true
 			wait(5000)
 			heal_in_chat = false
 		end)
@@ -3525,63 +3526,93 @@ imgui.OnFrame(
 	
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 		imgui.SetNextWindowSize(imgui.ImVec2(300 * MONET_DPI_SCALE, 415 * MONET_DPI_SCALE), imgui.Cond.FirstUseEver)
-		imgui.Begin(fa.USER_INJURED..' '..sampGetPlayerNickname(player_id)..'['..player_id..']##FastMenu', FastMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  )
+		imgui.Begin(fa.USER_INJURED..' '..sampGetPlayerNickname(player_id)..' ['..player_id..']##FastMenu', FastMenu, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize )
 		
-		if imgui.Button(u8"Привествие",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
-			command("Здраствуйте", player_id)
-			FastMenu[0] = false
-		end
+		-- if imgui.Button(u8"Привествие",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+		-- 	command("Здраствуйте", player_id)
+		-- 	FastMenu[0] = false
+		-- end
 		
-		if imgui.Button(u8"Позвать за собой",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
-			command("за мной",player_id)
-			FastMenu[0] = false
-		end
+		-- if imgui.Button(u8"Позвать за собой",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+		-- 	command("за мной",player_id)
+		-- 	FastMenu[0] = false
+		-- end
 		
-		if imgui.Button(u8"Обычное лечение",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
-			command("/heal {arg_id}",player_id)
-			FastMenu[0] = false
-		end
+		-- if imgui.Button(u8"Обычное лечение",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+		-- 	command("/heal {arg_id}",player_id)
+		-- 	FastMenu[0] = false
+		-- end
 		
-		if imgui.Button(u8"Лечение охранника",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
-			command("/healactor {arg_id}",player_id)
-			FastMenu[0] = false
-		end
+		-- if imgui.Button(u8"Лечение охранника",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+		-- 	command("/healactor {arg_id}",player_id)
+		-- 	FastMenu[0] = false
+		-- end
 		
-		if imgui.Button(u8"Лечение от наркозависимости",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
-			command("/healbad {arg_id}",player_id)
-			FastMenu[0] = false
-		end
+		-- if imgui.Button(u8"Лечение от наркозависимости",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+		-- 	command("/healbad {arg_id}",player_id)
+		-- 	FastMenu[0] = false
+		-- end
 		
-		if imgui.Button(u8"Оформление мед.страховки",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
-			command("/givemedinsurance {arg_id}",player_id)
-			FastMenu[0] = false
-		end
+		-- if imgui.Button(u8"Оформление мед.страховки",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+		-- 	command("/givemedinsurance {arg_id}",player_id)
+		-- 	FastMenu[0] = false
+		-- end
 		
-		if imgui.Button(u8"Оформление мед.карты",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
-			medcard(player_id)
-			FastMenu[0] = false
-		end
+		-- if imgui.Button(u8"Оформление мед.карты",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+		-- 	medcard(player_id)
+		-- 	FastMenu[0] = false
+		-- end
 		
-		if imgui.Button(u8"Проведение мед.осмотра пилота",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
-			command("/medcheck {arg_id}",player_id)
-			FastMenu[0] = false
-		end
+		-- if imgui.Button(u8"Проведение мед.осмотра пилота",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+		-- 	command("/medcheck {arg_id}",player_id)
+		-- 	FastMenu[0] = false
+		-- end
 		
-		if imgui.Button(u8"Выдача антибиотиков",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
-			antibiotik(player_id)
-			FastMenu[0] = false
-		end
+		-- if imgui.Button(u8"Выдача антибиотиков",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+		-- 	antibiotik(player_id)
+		-- 	FastMenu[0] = false
+		-- end
 		
-		if imgui.Button(u8"Выдача рецептов",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
-			recept(player_id)
-			FastMenu[0] = false
-		end
+		-- if imgui.Button(u8"Выдача рецептов",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+		-- 	recept(player_id)
+		-- 	FastMenu[0] = false
+		-- end
 		
-		if imgui.Button(u8"Выгнать из больницы",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
-			command("/expel {arg_id}",player_id)
-			FastMenu[0] = false
-		end
+		-- if imgui.Button(u8"Выгнать из больницы",imgui.ImVec2(290 * MONET_DPI_SCALE, 30 * MONET_DPI_SCALE)) then
+		-- 	command("/expel {arg_id}",player_id)
+		-- 	FastMenu[0] = false
+		-- end
 	
+		for _, command in ipairs(settings.commands) do
+			if command.enable and command.arg == '{arg_id}' then
+				if imgui.Button(u8(command.description), imgui.ImVec2( imgui.GetMiddleButtonX(1), 30 * MONET_DPI_SCALE)) then
+					lua_thread.create(function()
+						local arg = tonumber(player_id)
+						local modifiedText = command.text
+						modifiedText = modifiedText:gsub('%{get_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg) or "")
+						modifiedText = modifiedText:gsub('%{get_rp_nick%(%{arg_id%}%)%}', sampGetPlayerNickname(arg):gsub('_',' ') or "")
+						modifiedText = modifiedText:gsub('%{get_ru_nick%(%{arg_id%}%)%}', TranslateNick(sampGetPlayerNickname(arg)) or "")
+						modifiedText = modifiedText:gsub('%{arg_id%}', arg or "")	
+						local lines = {}
+						for line in string.gmatch(modifiedText, "[^&]+") do
+							table.insert(lines, line)
+						end		
+						for _, line in ipairs(lines) do
+							for tag, replacement in pairs(tagReplacements) do
+								local success, result = pcall(string.gsub, line, "{" .. tag .. "}", replacement())
+								if success then
+									line = result
+								end
+							end
+							sampSendChat(line)
+							wait( tonumber(command.waiting) * 1000 )
+						end
+					end)
+					FastMenu[0] = false
+				end
+			end
+		end
+
 		imgui.End()
 		
     end
