@@ -961,12 +961,12 @@ function initialize_commands()
 				lua_thread.create(function()
 					isActiveCommand = true
 					if isMonetLoader() and settings.general.mobile_stop_button then
-						sampAddChatMessage('[Justice Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop {ffffff}или нажмите кнопку внизу экрана', message_color)
+						sampAddChatMessage('[Hospital Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop {ffffff}или нажмите кнопку внизу экрана', message_color)
 						CommandStopWindow[0] = true
 					elseif not isMonetLoader() and hotkey_no_errors and settings.general.bind_command_stop and settings.general.use_binds then
-						sampAddChatMessage('[Justice Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop {ffffff}или нажмите ' .. message_color_hex .. getNameKeysFrom(settings.general.bind_command_stop), message_color)
+						sampAddChatMessage('[Hospital Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop {ffffff}или нажмите ' .. message_color_hex .. getNameKeysFrom(settings.general.bind_command_stop), message_color)
 					else
-						sampAddChatMessage('[Justice Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop', message_color)
+						sampAddChatMessage('[Hospital Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop', message_color)
 					end
 					sampSendChat("/rb Внимание! Через 15 секунд будет спавн транспорта организации.")
 					wait(1500)
@@ -976,7 +976,7 @@ function initialize_commands()
 						if isMonetLoader() and settings.general.mobile_stop_button then
 							CommandStopWindow[0] = false
 						end
-						sampAddChatMessage('[Justice Helper] {ffffff}Отыгровка команды /spcar успешно остановлена!', message_color) 
+						sampAddChatMessage('[Hospital Helper] {ffffff}Отыгровка команды /spcar успешно остановлена!', message_color) 
 						return
 					end
 					sampSendChat("/rb Займите транспорт, иначе он будет заспавнен.")
@@ -987,7 +987,7 @@ function initialize_commands()
 						if isMonetLoader() and settings.general.mobile_stop_button then
 							CommandStopWindow[0] = false
 						end
-						sampAddChatMessage('[Justice Helper] {ffffff}Отыгровка команды /spcar успешно остановлена!', message_color) 
+						sampAddChatMessage('[Hospital Helper] {ffffff}Отыгровка команды /spcar успешно остановлена!', message_color) 
 						return
 					end
 					spawncar_bool = true
@@ -998,7 +998,7 @@ function initialize_commands()
 					end
 				end)
 			else
-				sampAddChatMessage('[Justice Helper] {ffffff}Дождитесь завершения отыгровки предыдущей команды!', message_color)
+				sampAddChatMessage('[Hospital Helper] {ffffff}Дождитесь завершения отыгровки предыдущей команды!', message_color)
 			end
 		end)
 		-- Ригистрация всех команд которые есть в json для 9/10
