@@ -943,7 +943,15 @@ function initialize_commands()
 			sampAddChatMessage('[Hospital Helper] {ffffff}Дождитесь завершения отыгровки предыдущей команды!', message_color)
 		end
 	end)
-	sampRegisterChatCommand("mb", function()  end)
+	sampRegisterChatCommand("mb", function() 
+		if not isActiveCommand then
+			members_new = {} 
+			members_check = true 
+			sampSendChat("/members")
+		else
+			sampAddChatMessage('[SMI Helper] {ffffff}Дождитесь завершения отыгровки предыдущей команды!', message_color)
+		end
+	end)
 	sampRegisterChatCommand("dep", function() DeportamentWind[0] = not DeportamentWindow[0]  end)
 	-- Ригистрация всeх команд которые есть в json
 	registerCommandsFrom(settings.commands)
