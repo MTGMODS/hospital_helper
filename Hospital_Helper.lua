@@ -3,7 +3,7 @@
 script_name("Hospital Helper")
 script_description('Cross-platform script helper for Medical Center')
 script_author("MTG MODS")
-script_version("3.4")
+script_version("3.5")
 
 require('lib.moonloader')
 require ('encoding').default = 'CP1251'
@@ -150,8 +150,6 @@ local default_settings = {
 		{ note_name = 'Правила больницы СФ на 20 сервере', note_text = '1. Общие положения больницы&Сотрудники обязаны:&Соблюдать все правила нашей больницы&Соблюдать законы штата (УК и ПДД)&Иметь RP отыгровки (хелпер или биндер)&Иметь свой личный бейджик (рп описание в /settings)&Вести себя адекватно в любой ситуации&Подчинятся лидеру и заместителям&&Сотрудники имеют право:&Носить любые аксесуары, которые у них есть&Ходить на АБ, ЦР, квесты и т.д. в форме.&Работать (например шахта, пилот и тд) в  форме.&&Cотрудники не имеют права:&Использовать тревожную кнопку без причины.&Воровать загруженные кареты скорой помощи&Повышаться если у них есть активный выговор.&Участвовать в Ситуациях без RP отыгровок&Возить медикаменты во время Ситуаций&&Сотрудники должны быть активными:&5 дней не в сети = понижение на 5 ранг&&2. График работы больницы&Больница работает ежедневно от 10:00 до 20:00.&Обеденный перерыв у нас от 14:00 до 16:00.&Во время р/д все сотрудники обязаны быть в рабочей форме.&&3 Ценовая политика больницы.&За какую либо услугу запрещено брать деньги через /trade или /pay , разрешено только используя команды сервера/хелпера!&Простое лечение: от 20.000$ (на ваше усмотрение)&Лечение охранников: 400.000$.&Лечение от наркозависимости: 400.000$.&Проведение мед. осмотра: 400.000$.&Оформление военного билета: 400.000$.&Выписывание антибиотиков: 50.000$.&Выписывание рецептов: 50.000$.&Выдача мед.страховок:&1 неделя - 400.000$, 2 недели - 800.000$, 3 недели- 1.200.000$.&Выдача мед.карт:&7 дней - 50.000$, 14 дней - 100.000$, 30 дней - 150.000$, 60 дней - 200.000$.&&4. Оказание медецинских услуг больницы.&Лечение пациентов разрешается в любом месте.&Лечение охранников разрешается в любом месте.&Лечение от наркозависимости с помощью таблеток разрешается в любом месте, а с помощью уколов только в кабинете на 1 этаже.&Проведение мед. осмотра для пилотов разрешается в кабинете на 1 этаже или возле палатки МЗ.&Проведение мед. обследования для военного билета разрешается в кабинете на 1 этаже или возле палатки МЗ.&Выдача рецептов и антибиотиков разрешается разрешается в любом месте.&Выдача мед. карт разрешается за стойкой на 1 этаже, или в карете скорой помощи, или возле палатки МЗ.&Выдача мед. страховкок разрешается только за стойкой на 1 этаже и возле палатки МЗ.&&5. Правила выгона посетителей больницы.&Выгонять из больницы можно только с причиной Н.П.Б. (расшифровка: Нарушение Правил Больницы).&Сотрудники имеют право выгнать посетителей из больницы, только если они нарушают то, что указано ниже:&- Человек кричит в больнице.&- Человек просто так бегает по больнице.&- Человек носит оружие в открытом виде.&- Человек проникает за стойку на 1-м этаже.&- Человек проникает в палаты или раздевалку.&- Человек проявляет неадекватное поведение.&- Человек угрожает врачам либо другим посетителям.&- Человек занимается торговлей/попрошайничеством в больнице.&- Человек стоит в массовой толпе в палате (именно AFKшники которые заспавнились в больке и даже не двинулись).', deleted = false  },
 	},
 	commands = {
-		{ cmd = 'mb' , description = 'Открыть список сотрудников в сети' , text = '{open_mimgui_members}', arg = '' , enable = true , waiting = '1.200', deleted = false },
-		{ cmd = 'dep' , description = 'Открыть меню рации депортамента' , text = '{show_deportament_menu}', arg = '' , enable = true , waiting = '1.200', deleted = false },
 		{ cmd = 'hme' , description = 'Лечение самого себя' ,  text = '/me достаёт из своего мед.кейса лекарство и принимает его&/heal {my_id} {price_heal}' , arg = '' , enable = true, waiting = '1.200', deleted = false  },
 		{ cmd = 'zd' , description = 'Привествие игрока' , text = 'Здраствуйте {get_ru_nick({arg_id})}&Я {my_ru_nick} - {fraction_rank} {fraction_tag}&Чем я могу Вам помочь?', arg = '{arg_id}' , enable = true , waiting = '1.200', deleted = false },
 		{ cmd = 'go' , description = 'Позвать игрока за собой' , text = 'Хорошо {get_ru_nick({arg_id})}, следуйте за мной.', arg = '{arg_id}' , enable = true, waiting = '1.200', deleted = false   },
@@ -437,31 +435,20 @@ local binder_tags_text = [[
 {get_nick({arg_id})} - получить Никнейм из аргумента ID игрока
 {get_rp_nick({arg_id})} - получить Никнейм без символа _ из аргумента ID игрока
 {get_ru_nick({arg_id})} - получить Никнейм на кирилице из аргумента ID игрока 
-]]
-local binder_tags_text2 = [[
+
 {show_medcard_menu} - Открыть меню мед.карты
 {get_medcard_days} - Получить номер выбранного кол-ва дней
 {get_medcard_status} - Получить номер выбранного статуса
 {get_medcard_price} - Получить цену мед.карты исходя из дней
-
 {show_recept_menu} - Открыть меню выдачи рецептов
 {get_recepts} - Получить кол-во выбранных рецептов
-
 {show_ant_menu} - Открыть меню выдачи антибиотиков 
 {get_ants} - Получить кол-во выбранных антибиотиков
-
-{show_deportament_menu} - Открыть меню рации депортамента
-
 {lmenu_vc_vize} - Авто-выдача визы Vice City
 {give_platoon} - Назначить взвод игроку
-
-{open_mimgui_members} - Открыть Mimgui Members
-
 {show_rank_menu} - Открыть меню выдачи рангов
 {get_rank} - Получить выбранный ранг
-
-{pause} - Поставить команду на паузу и ожидать нажатия
-]]
+{pause} - Поставить команду на паузу и ожидать нажатия]]
 -------------------------------------------- MoonMonet ----------------------------------------------------
 
 local monet_no_errors, moon_monet = pcall(require, 'MoonMonet') -- безопасно подключаем библиотеку
@@ -633,8 +620,10 @@ function main()
 		end 
 
 		if ((os.date("%M", os.time()) == "55" and os.date("%S", os.time()) == "00") or (os.date("%M", os.time()) == "25" and os.date("%S", os.time()) == "00")) then
-			sampAddChatMessage('[Hospital Helper] {ffffff}Через 5 минут будет PAYDAY. Наденьте форму чтобы не пропустить зарплату!', message_color)
-			wait(1000)
+			if sampGetPlayerColor(tagReplacements.my_id()) == 368966908 then
+				sampAddChatMessage('[SMI Helper] {ffffff}Через 5 минут будет PAYDAY. Наденьте форму чтобы не пропустить зарплату!', message_color)
+				wait(1000)
+			end
 		end
 
 		if clicked then
@@ -710,7 +699,7 @@ function register_command(chat_cmd, cmd_arg, cmd_text, cmd_waiting)
 					arg_check = true
 				else
 					sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. chat_cmd .. ' [аргумент]', message_color)
-					play_error_sound()
+					
 				end
 			elseif cmd_arg == '{arg_id}' then
 				if isParamSampID(arg) then
@@ -722,7 +711,7 @@ function register_command(chat_cmd, cmd_arg, cmd_text, cmd_waiting)
 					arg_check = true
 				else
 					sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. chat_cmd .. ' [ID игрока]', message_color)
-					play_error_sound()
+					
 				end
 			elseif cmd_arg == '{arg_id} {arg2}' then
 				if arg and arg ~= '' then
@@ -737,11 +726,11 @@ function register_command(chat_cmd, cmd_arg, cmd_text, cmd_waiting)
 						arg_check = true
 					else
 						sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. chat_cmd .. ' [ID игрока] [аргумент]', message_color)
-						play_error_sound()
+						
 					end
 				else
 					sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. chat_cmd .. ' [ID игрока] [аргумент]', message_color)
-					play_error_sound()
+					
 				end
 			elseif cmd_arg == '{arg_id} {arg2} {arg3}' then
 				if arg and arg ~= '' then
@@ -757,11 +746,11 @@ function register_command(chat_cmd, cmd_arg, cmd_text, cmd_waiting)
 						arg_check = true
 					else
 						sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. chat_cmd .. ' [ID игрока] [аргумент] [аргумент]', message_color)
-						play_error_sound()
+						
 					end
 				else
 					sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. '/' .. chat_cmd .. ' [ID игрока] [аргумент] [аргумент]', message_color)
-					play_error_sound()
+					
 				end
 			elseif cmd_arg == '' then
 				arg_check = true
@@ -793,106 +782,108 @@ function register_command(chat_cmd, cmd_arg, cmd_text, cmd_waiting)
 							end
 							sampAddChatMessage('[Hospital Helper] {ffffff}Отыгровка команды /' .. chat_cmd .. " успешно остановлена!", message_color) 
 							return 
-						end
-						for tag, replacement in pairs(tagReplacements) do
-							if line:find("{" .. tag .. "}") then
-                                local success, result = pcall(string.gsub, line, "{" .. tag .. "}", replacement())
-                                if success then
-                                    line = result
-                                end
-                            end
-						end
-						if line == '{show_medcard_menu}' then
-							if cmd_arg == '{arg_id}' then
-								player_id = arg
-							elseif cmd_arg == '{arg_id} {arg2}' then
-								local arg_id, arg2 = arg:match('(%d+) (.+)')
-								if arg_id and arg2 and isParamSampID(arg_id) then
-									player_id = tonumber(arg_id)
-								end
-							end
-							MedCardMenu[0] = true
-							break
-						elseif line == '{show_recept_menu}' then
-							if cmd_arg == '{arg_id}' then
-								player_id = arg
-							elseif cmd_arg == '{arg_id} {arg2}' then
-								local arg_id, arg2 = arg:match('(%d+) (.+)')
-								if arg_id and arg2 and isParamSampID(arg_id) then
-									player_id = tonumber(arg_id)
-								end
-							end
-							ReceptMenu[0] = true
-							break
-						elseif line == '{show_ant_menu}' then
-							if cmd_arg == '{arg_id}' then
-								player_id = arg
-							elseif cmd_arg == '{arg_id} {arg2}' then
-								local arg_id, arg2 = arg:match('(%d+) (.+)')
-								if arg_id and arg2 and isParamSampID(arg_id) then
-									player_id = tonumber(arg_id)
-								end
-							end
-							AntibiotikMenu[0] = true
-							break
-						elseif line == '{lmenu_vc_vize}' then
-							if cmd_arg == '{arg_id}' then
-								vc_vize_player_id = arg
-							elseif cmd_arg == '{arg_id} {arg2}' then
-								local arg_id, arg2 = arg:match('(%d+) (.+)')
-								if arg_id and arg2 and isParamSampID(arg_id) then
-									vc_vize_player_id = tonumber(arg_id)
-								end
-							end
-							vc_vize_bool = true
-							sampSendChat("/lmenu")
-							break
-						elseif line == '{open_mimgui_members}' then
-							members_new = {} 
-							members_check = true 
-							sampSendChat("/members")
-							break
-						elseif line == '{show_deportament_menu}' then
-							DeportamentWindow[0] = true
-							break
-						elseif line == '{give_platoon}' then
-							if cmd_arg == '{arg_id}' then
-								player_id = arg
-							elseif cmd_arg == '{arg_id} {arg2}' then
-								local arg_id, arg2 = arg:match('(%d+) (.+)')
-								if arg_id and arg2 and isParamSampID(arg_id) then
-									player_id = arg_id
-								end
-							end
-							platoon_check = true
-							sampSendChat("/platoon")
-							break
-						elseif line == '{show_rank_menu}' then
-							if cmd_arg == '{arg_id}' then
-								player_id = arg
-							elseif cmd_arg == '{arg_id} {arg2}' then
-								local arg_id, arg2 = arg:match('(%d+) (.+)')
-								if arg_id and arg2 and isParamSampID(arg_id) then
-									player_id = arg_id
-								end
-							end
-							GiveRankMenu[0] = true
-							break
-						elseif line == '{show_rank_menu}' then
-						elseif line == "{pause}" then
-							sampAddChatMessage('[Hospital Helper] {ffffff}Команда /' .. chat_cmd .. ' поставлена на паузу!', message_color)
-							command_pause = true
-							CommandPauseWindow[0] = true
-							while command_pause do
-								wait(0)
-							end
-							if not command_stop then
-								sampAddChatMessage('[Hospital Helper] {ffffff}Продолжаю отыгровку команды /' .. chat_cmd, message_color)	
-							end					
 						else
-							if line_index ~= 1 then wait(cmd_waiting * 1000) end
-							sampSendChat(line)
-							if debug_mode then sampAddChatMessage('[Hospital Helper DEBUG] SEND: ' .. line, message_color) end
+							for tag, replacement in pairs(tagReplacements) do
+								if line:find("{" .. tag .. "}") then
+									local success, result = pcall(string.gsub, line, "{" .. tag .. "}", replacement())
+									if success then
+										line = result
+									end
+								end
+							end
+							if line == '{show_medcard_menu}' then
+								if cmd_arg == '{arg_id}' then
+									player_id = arg
+								elseif cmd_arg == '{arg_id} {arg2}' then
+									local arg_id, arg2 = arg:match('(%d+) (.+)')
+									if arg_id and arg2 and isParamSampID(arg_id) then
+										player_id = tonumber(arg_id)
+									end
+								end
+								MedCardMenu[0] = true
+								break
+							elseif line == '{show_recept_menu}' then
+								if cmd_arg == '{arg_id}' then
+									player_id = arg
+								elseif cmd_arg == '{arg_id} {arg2}' then
+									local arg_id, arg2 = arg:match('(%d+) (.+)')
+									if arg_id and arg2 and isParamSampID(arg_id) then
+										player_id = tonumber(arg_id)
+									end
+								end
+								ReceptMenu[0] = true
+								break
+							elseif line == '{show_ant_menu}' then
+								if cmd_arg == '{arg_id}' then
+									player_id = arg
+								elseif cmd_arg == '{arg_id} {arg2}' then
+									local arg_id, arg2 = arg:match('(%d+) (.+)')
+									if arg_id and arg2 and isParamSampID(arg_id) then
+										player_id = tonumber(arg_id)
+									end
+								end
+								AntibiotikMenu[0] = true
+								break
+							elseif line == '{lmenu_vc_vize}' then
+								if cmd_arg == '{arg_id}' then
+									vc_vize_player_id = arg
+								elseif cmd_arg == '{arg_id} {arg2}' then
+									local arg_id, arg2 = arg:match('(%d+) (.+)')
+									if arg_id and arg2 and isParamSampID(arg_id) then
+										vc_vize_player_id = tonumber(arg_id)
+									end
+								end
+								vc_vize_bool = true
+								sampSendChat("/lmenu")
+								break
+							elseif line == '{give_platoon}' then
+								if cmd_arg == '{arg_id}' then
+									player_id = arg
+								elseif cmd_arg == '{arg_id} {arg2}' then
+									local arg_id, arg2 = arg:match('(%d+) (.+)')
+									if arg_id and arg2 and isParamSampID(arg_id) then
+										player_id = arg_id
+									end
+								end
+								platoon_check = true
+								sampSendChat("/platoon")
+								break
+							elseif line == '{show_rank_menu}' then
+								if cmd_arg == '{arg_id}' then
+									player_id = arg
+								elseif cmd_arg == '{arg_id} {arg2}' then
+									local arg_id, arg2 = arg:match('(%d+) (.+)')
+									if arg_id and arg2 and isParamSampID(arg_id) then
+										player_id = arg_id
+									end
+								end
+								GiveRankMenu[0] = true
+								break
+							elseif line == '{show_rank_menu}' then
+							elseif line == "{pause}" then
+								sampAddChatMessage('[Hospital Helper] {ffffff}Команда /' .. chat_cmd .. ' поставлена на паузу!', message_color)
+								command_pause = true
+								CommandPauseWindow[0] = true
+								while command_pause do
+									wait(0)
+								end
+								if not command_stop then
+									sampAddChatMessage('[Hospital Helper] {ffffff}Продолжаю отыгровку команды /' .. chat_cmd, message_color)	
+								end					
+							else
+								if line_index ~= 1 then wait(cmd_waiting * 1000) end
+								if not command_stop then
+									sampSendChat(line)
+								else
+									command_stop = false 
+									isActiveCommand = false
+									if isMonetLoader() and settings.general.mobile_stop_button then
+										CommandStopWindow[0] = false
+									end
+									sampAddChatMessage('[Hospital Helper] {ffffff}Отыгровка команды /' .. chat_cmd .. " успешно остановлена!", message_color) 	
+									break
+								end
+							end
 						end
 					end
 					isActiveCommand = false
@@ -952,6 +943,8 @@ function initialize_commands()
 			sampAddChatMessage('[Hospital Helper] {ffffff}Дождитесь завершения отыгровки предыдущей команды!', message_color)
 		end
 	end)
+	sampRegisterChatCommand("mb", function()  end)
+	sampRegisterChatCommand("dep", function() DeportamentWind[0] = not DeportamentWindow[0]  end)
 	-- Ригистрация всeх команд которые есть в json
 	registerCommandsFrom(settings.commands)
 	if tonumber(settings.player_info.fraction_rank_number) >= 9 then 
@@ -961,12 +954,12 @@ function initialize_commands()
 				lua_thread.create(function()
 					isActiveCommand = true
 					if isMonetLoader() and settings.general.mobile_stop_button then
-						sampAddChatMessage('[Hospital Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop {ffffff}или нажмите кнопку внизу экрана', message_color)
+						sampAddChatMessage('[Justice Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop {ffffff}или нажмите кнопку внизу экрана', message_color)
 						CommandStopWindow[0] = true
 					elseif not isMonetLoader() and hotkey_no_errors and settings.general.bind_command_stop and settings.general.use_binds then
-						sampAddChatMessage('[Hospital Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop {ffffff}или нажмите ' .. message_color_hex .. getNameKeysFrom(settings.general.bind_command_stop), message_color)
+						sampAddChatMessage('[Justice Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop {ffffff}или нажмите ' .. message_color_hex .. getNameKeysFrom(settings.general.bind_command_stop), message_color)
 					else
-						sampAddChatMessage('[Hospital Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop', message_color)
+						sampAddChatMessage('[Justice Helper] {ffffff}Чтобы остановить отыгровку команды используйте ' .. message_color_hex .. '/stop', message_color)
 					end
 					sampSendChat("/rb Внимание! Через 15 секунд будет спавн транспорта организации.")
 					wait(1500)
@@ -976,7 +969,7 @@ function initialize_commands()
 						if isMonetLoader() and settings.general.mobile_stop_button then
 							CommandStopWindow[0] = false
 						end
-						sampAddChatMessage('[Hospital Helper] {ffffff}Отыгровка команды /spcar успешно остановлена!', message_color) 
+						sampAddChatMessage('[Justice Helper] {ffffff}Отыгровка команды /spcar успешно остановлена!', message_color) 
 						return
 					end
 					sampSendChat("/rb Займите транспорт, иначе он будет заспавнен.")
@@ -987,7 +980,7 @@ function initialize_commands()
 						if isMonetLoader() and settings.general.mobile_stop_button then
 							CommandStopWindow[0] = false
 						end
-						sampAddChatMessage('[Hospital Helper] {ffffff}Отыгровка команды /spcar успешно остановлена!', message_color) 
+						sampAddChatMessage('[Justice Helper] {ffffff}Отыгровка команды /spcar успешно остановлена!', message_color) 
 						return
 					end
 					spawncar_bool = true
@@ -998,7 +991,7 @@ function initialize_commands()
 					end
 				end)
 			else
-				sampAddChatMessage('[Hospital Helper] {ffffff}Дождитесь завершения отыгровки предыдущей команды!', message_color)
+				sampAddChatMessage('[Justice Helper] {ffffff}Дождитесь завершения отыгровки предыдущей команды!', message_color)
 			end
 		end)
 		-- Ригистрация всех команд которые есть в json для 9/10
@@ -1099,11 +1092,6 @@ function isParamSampID(id)
 		end
 	else
 		return false
-	end
-end
-function play_error_sound()
-	if not isMonetLoader() and sampIsLocalPlayerSpawned() then
-		addOneOffSound(getCharCoordinates(PLAYER_PED), 1149)
 	end
 end
 function show_fast_menu(id)
@@ -1258,67 +1246,129 @@ function sampGetPlayerIdByNickname(nick)
 	end
 	return id
 end
-
+local servers = {
+	{name = 'Phoenix', number = '01'},
+	{name = 'Tucson', number = '02'},
+	{name = 'Scottdale', number = '03'},
+	{name = 'Chandler', number = '04'},
+	{name = 'Brainburg', number = '05'},
+	{name = 'Saint%-Rose', number = '06'},
+	{name = 'Mesa', number = '07'},
+	{name = 'Red%-Rock', number = '08'},
+	{name = 'Yuma', number = '09'},
+	{name = 'Surprise', number = '10'},
+	{name = 'Prescott', number = '11'},
+	{name = 'Glendale', number = '12'},
+	{name = 'Kingman', number = '13'},
+	{name = 'Winslow', number = '14'},
+	{name = 'Payson', number = '15'},
+	{name = 'Gilbert', number = '16'},
+	{name = 'Show Low', number = '17'},
+	{name = 'Casa%-Grande', number = '18'},
+	{name = 'Page', number = '19'},
+	{name = 'Sun%-City', number = '20'},
+	{name = 'Queen%-Creek', number = '21'},
+	{name = 'Sedona', number = '22'},
+	{name = 'Holiday', number = '23'},
+	{name = 'Wednesday', number = '24'},
+	{name = 'Yava', number = '25'},
+	{name = 'Faraway', number = '26'},
+	{name = 'Bumble Bee', number = '27'},
+	{name = 'Christmas', number = '28'},
+	{name = 'Mirage', number = '29'},
+	{name = 'Love', number = '30'},
+	{name = 'Mobile III', number = '103'},
+	{name = 'Mobile II', number = '102'},
+	{name = 'Mobile I', number = '101'},
+	{name = 'Vice City', number = '200'},
+}
+function getARZServerNumber()
+	local server = 0
+	for _, s in ipairs(servers) do
+		if sampGetCurrentServerName():find(s.name) then
+			server = s.number
+			break
+		end
+	end
+	return server
+end
+function getARZServerName(number)
+	local server = ''
+	for _, s in ipairs(servers) do
+		if tostring(number) == tostring(s.number) then
+			server = s.name
+			break
+		end
+	end
+	return server
+end
 function sampev.onServerMessage(color,text)
 	--sampAddChatMessage('color = ' .. color .. ' , text = '..text,-1)
 	if (settings.general.auto_uval and tonumber(settings.player_info.fraction_rank_number) >= 9) then
 		if text:find("%[(.-)%] (.-) (.-)%[(.-)%]: (.+)") and color == 766526463 then -- /f /fb или /r /rb без тэга 
 			local tag, rank, name, playerID, message = string.match(text, "%[(.-)%] (.+) (.-)%[(.-)%]: (.+)")
-			if ((not message:find(" отправьте (.+) +++ чтобы уволится ПСЖ!") and not message:find("Сотрудник (.+) был уволен по причине(.+)")) and (message:rupper():find("ПСЖ") or message:rupper():find("ПСЖ.") or message:rupper():find("УВОЛЬТЕ") or message:find("УВОЛЬТЕ.") or message:rupper():find("УВАЛ") or message:rupper():find("УВАЛ."))) then
-				message3 = message2
-				message2 = message1
-				message1 = text
-				PlayerID = playerID
-				sampAddChatMessage(text, 0xFF2DB043)
-				if message3 == text then
+			lua_thread.create(function ()
+				wait(50)
+				if ((not message:find(" отправьте (.+) +++ чтобы уволится ПСЖ!") and not message:find("Сотрудник (.+) был уволен по причине(.+)")) and (message:rupper():find("ПСЖ") or message:rupper():find("ПСЖ.") or message:rupper():find("УВОЛЬТЕ") or message:find("УВОЛЬТЕ.") or message:rupper():find("УВАЛ") or message:rupper():find("УВАЛ."))) then
+					message3 = message2
+					message2 = message1
+					message1 = text
+					PlayerID = playerID
+					sampAddChatMessage(text, 0xFF2DB043)
+					if message3 == text then
+						auto_uval_checker = true
+						sampSendChat('/fmute ' .. playerID .. ' 1 [AutoUval] Ожидайте...')
+					elseif tag == "R" then
+						sampSendChat("/rb "..name.." отправьте /rb +++ чтобы уволится ПСЖ!")
+					elseif tag == "F" then
+						sampSendChat("/fb "..name.." отправьте /fb +++ чтобы уволится ПСЖ!")
+					end
+				elseif ((message == "(( +++ ))" or message == "(( +++. ))") and (PlayerID == playerID)) then
+					sampAddChatMessage(text, 0xFF2DB043)
 					auto_uval_checker = true
-					sampSendChat('/fmute ' .. playerID .. ' 1 [AutoUval] Ожидайте...')
-				elseif tag == "R" then
-					sampSendChat("/rb "..name.." отправьте /rb +++ чтобы уволится ПСЖ!")
-				elseif tag == "F" then
-					sampSendChat("/fb "..name.." отправьте /fb +++ чтобы уволится ПСЖ!")
+					sampSendChat('/fmute ' .. PlayerID .. ' 1 [AutoUval] Ожидайте...')
 				end
-			elseif ((message == "(( +++ ))" or message == "(( +++. ))") and (PlayerID == playerID)) then
-			 	sampAddChatMessage(text, 0xFF2DB043)
-				auto_uval_checker = true
-				sampSendChat('/fmute ' .. PlayerID .. ' 1 [AutoUval] Ожидайте...')
-			end
+			end)
 		elseif text:find("%[(.-)%] %[(.-)%] (.+) (.-)%[(.-)%]: (.+)") and color == 766526463 then -- /r или /f с тэгом
 			local tag, tag2, rank, name, playerID, message = string.match(text, "%[(.-)%] %[(.-)%] (.+) (.-)%[(.-)%]: (.+)")
-			if not message:find(" отправьте (.+) +++ чтобы уволится ПСЖ!") and not message:find("Сотрудник (.+) был уволен по причине(.+)") and message:rupper():find("ПСЖ") or message:rupper():find("ПСЖ.") or message:rupper():find("УВОЛЬТЕ") or message:find("УВОЛЬТЕ.") or message:rupper():find("УВАЛ") or message:rupper():find("УВАЛ.") then
-				message3 = message2
-				message2 = message1
-				message1 = text
-				PlayerID = playerID	
-				sampAddChatMessage(text, 0xFF2DB043)
-				if message3 == text then
+			lua_thread.create(function ()
+				wait(50)
+				if not message:find(" отправьте (.+) +++ чтобы уволится ПСЖ!") and not message:find("Сотрудник (.+) был уволен по причине(.+)") and message:rupper():find("ПСЖ") or message:rupper():find("ПСЖ.") or message:rupper():find("УВОЛЬТЕ") or message:find("УВОЛЬТЕ.") or message:rupper():find("УВАЛ") or message:rupper():find("УВАЛ.") then
+					message3 = message2
+					message2 = message1
+					message1 = text
+					PlayerID = playerID	
+					sampAddChatMessage(text, 0xFF2DB043)
+					if message3 == text then
+						auto_uval_checker = true
+						sampSendChat('/fmute ' .. playerID .. ' 1 [AutoUval] Ожидайте...')
+					elseif tag == "R" then
+						sampSendChat("/rb "..name.."["..playerID.."], отправьте /rb +++ чтобы уволится ПСЖ!")
+					elseif tag == "F" then
+						sampSendChat("/fb "..name.."["..playerID.."], отправьте /fb +++ чтобы уволится ПСЖ!")
+					end
+				elseif ((message == "(( +++ ))" or  message == "(( +++. ))") and (PlayerID == playerID)) then
 					auto_uval_checker = true
 					sampSendChat('/fmute ' .. playerID .. ' 1 [AutoUval] Ожидайте...')
-				elseif tag == "R" then
-					sampSendChat("/rb "..name.."["..playerID.."], отправьте /rb +++ чтобы уволится ПСЖ!")
-				elseif tag == "F" then
-					sampSendChat("/fb "..name.."["..playerID.."], отправьте /fb +++ чтобы уволится ПСЖ!")
 				end
-			elseif ((message == "(( +++ ))" or  message == "(( +++. ))") and (PlayerID == playerID)) then
-				sampAddChatMessage(text, 0xFF2DB043)
-				auto_uval_checker = true
-				sampSendChat('/fmute ' .. playerID .. ' 1 [AutoUval] Ожидайте...')
-			end
+			end)
 		end
 		
 		if text:find("(.+) заглушил%(а%) игрока (.+) на 1 минут. Причина: %[AutoUval%] Ожидайте...") and auto_uval_checker then
-			sampAddChatMessage(text, message_color)
 			local Name, PlayerName, Time, Reason = text:match("(.+) заглушил%(а%) игрока (.+) на (%d+) минут. Причина: (.+)")
 			local MyName = sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED)))
-			if Name == MyName then
-				sampAddChatMessage('[Hospital Helper] {ffffff}Увольняю игрока ' .. sampGetPlayerNickname(PlayerID) .. '!', message_color)
-				auto_uval_checker = false
-				temp = PlayerID .. ' ПСЖ'
-				find_and_use_command("/uninvite {arg_id} {arg2}", temp)
-			else
-				sampAddChatMessage('[Hospital Helper] {ffffff}Другой заместитель/лидер уже увольняет игрока ' .. sampGetPlayerNickname(PlayerID) .. '!', message_color)
-				auto_uval_checker = false
-			end
+			lua_thread.create(function ()
+				wait(50)
+				if Name == MyName then
+					sampAddChatMessage('[Hospital Helper] {ffffff}Увольняю игрока ' .. sampGetPlayerNickname(PlayerID) .. '!', message_color)
+					auto_uval_checker = false
+					temp = PlayerID .. ' ПСЖ'
+					find_and_use_command("/uninvite {arg_id} {arg2}", temp)
+				else
+					sampAddChatMessage('[Hospital Helper] {ffffff}Другой заместитель/лидер уже увольняет игрока ' .. sampGetPlayerNickname(PlayerID) .. '!', message_color)
+					auto_uval_checker = false
+				end
+			end)
 		end
 	end
 	if (text:find("У (.+) отсутствует трудовая книжка. Вы можете выдать ему книжку с помощью команды /givewbook") and tonumber(settings.player_info.fraction_rank_number) >= 9) then
@@ -1396,6 +1446,33 @@ function sampev.onServerMessage(color,text)
 		sampAddChatMessage('[Hospital Helper] {ffffff}111 Баланс | 60 Время | 911 МЮ | 912 МЗ | 913 Такси | 914 Мехи | 8828 Банк | 997 Дома', message_color)
 		return false
 	end
+	if (text:find('Bogdan_Martelli%[%d+%]') and getARZServerNumber():find('20')) or text:find('%[20%]Bogdan_Martelli') then
+		local lastColor = text:match("(.+){%x+}$")
+   		if not lastColor then
+			lastColor = "{" .. rgba_to_hex(color) .. "}"
+		end
+		if text:find('%[VIP ADV%]') or text:find('%[FOREVER%]') then
+			lastColor = "{FFFFFF}"
+		end
+		if text:find('%[20%]Bogdan_Martelli%[%d+%]') then
+			-- Случай 2: [20]Bogdan_Martelli[123]
+			local id = text:match('%[20%]Bogdan_Martelli%[(%d+)%]') or ''
+			text = string.gsub(text, '%[20%]Bogdan_Martelli%[%d+%]', message_color_hex .. '[20]MTG MODS[' .. id .. ']' .. lastColor)
+		
+		elseif text:find('%[20%]Bogdan_Martelli') then
+			-- Случай 1: [20]Bogdan_Martelli
+			text = string.gsub(text, '%[20%]Bogdan_Martelli', message_color_hex .. '[20]MTG MODS' .. lastColor)
+		
+		elseif text:find('Bogdan_Martelli%[%d+%]') then
+			-- Случай 3: Bogdan_Martelli[123]
+			local id = text:match('Bogdan_Martelli%[(%d+)%]') or ''
+			text = string.gsub(text, 'Bogdan_Martelli%[%d+%]', message_color_hex .. 'MTG MODS[' .. id .. ']' .. lastColor)
+		elseif text:find('Bogdan_Martelli') then
+			-- Случай 3: Bogdan_Martelli
+			text = string.gsub(text, 'Bogdan_Martelli', message_color_hex .. 'MTG MODS' .. lastColor)
+		end
+		return {color,text}
+	end
 end
 function sampev.onSendChat(text)
 	local ignore = {
@@ -1457,6 +1534,8 @@ function sampev.onSendCommand(text)
 	return {text}
 end
 function sampev.onShowDialog(dialogid, style, title, button1, button2, text)
+
+	
 
 	if (text:find('{FFFFFF}Медик {DAD540}(.+){FFFFFF} хочет вылечить вас за {DAD540}') and text:find(sampGetPlayerNickname(select(2, sampGetPlayerIdByCharHandle(PLAYER_PED))):gsub('%[%d+%]',''))) then -- /hme
 		sampSendDialogResponse(dialogid, 1,0,0)
@@ -1558,6 +1637,7 @@ function sampev.onShowDialog(dialogid, style, title, button1, button2, text)
 	end
 
 	if members_check and title:find('(.+)%(В сети: (%d+)%)') then -- мемберс 
+	
         local count = 0
         local next_page = false
         local next_page_i = 0
@@ -1566,7 +1646,8 @@ function sampev.onShowDialog(dialogid, style, title, button1, button2, text)
         for line in text:gmatch('[^\r\n]+') do
             count = count + 1
             if not line:find('Ник') and not line:find('страница') then
-				local color, nickname, id, rank, rank_number, warns, afk = string.match(line, '{(.+)}(.+)%((%d+)%)\t(.+)%((%d+)%)\t(%d+) %((%d+)')
+				--local color, nickname, id, rank, rank_number, warns, afk = string.match(line, '{(.+)}(.+)%((%d+)%)\t(.+)%((%d+)%)\t(%d+) %((%d+)')
+				local color, nickname, id, rank, rank_number, color2, warns, afk = string.match(line, "{(%x+)}([^%(]+)%((%d+)%)%s+([^%(]+)%((%d+)%)%s+{(%x+)}(%d+) %((%d)(.+)шт")
 				if color ~= nil and nickname ~= nil and id ~= nil and rank ~= nil and rank_number ~= nil and warns ~= nil and afk ~= nil then
 					local working = false
 					if color:find('FF3B3B') then
@@ -1574,7 +1655,11 @@ function sampev.onShowDialog(dialogid, style, title, button1, button2, text)
 					elseif color:find('FFFFFF') then
 						working = true
 					end
-					table.insert(members_new, { nick = nickname, id = id, rank = rank, rank_number = rank_number, warns = warns, afk = afk, working = working })
+					if nickname:find('%[%:(.+)%] (.+)') then
+						tag, nick = nickname:match('%[(.+)%] (.+)')
+						nickname = nick
+					end
+					table.insert(members_new, { nick = nickname, id = id, rank = rank, rank_number = rank_number, warns = warns, afk = afk, working = working})
 				end
             end
             if line:match('Следующая страница') then
@@ -1586,11 +1671,15 @@ function sampev.onShowDialog(dialogid, style, title, button1, button2, text)
             sampSendDialogResponse(dialogid, 1, next_page_i, 0)
             next_page = false
             next_pagei = 0
-        else
+		elseif #members_new ~= 0 then
             sampSendDialogResponse(dialogid, 0, 0, 0)
 			members = members_new
 			members_check = false
 			MembersWindow[0] = true
+		else
+			sampSendDialogResponse(dialogid, 0, 0, 0)
+			sampAddChatMessage('[Hospital Helper]{ffffff} Список сотрудников пуст!', message_color)
+			members_check = false
         end
         return false
     end
@@ -2012,6 +2101,22 @@ imgui.OnFrame(
 							imgui.Columns(1)
 							imgui.Separator()
 							imgui.Columns(3)
+							imgui.CenterColumnText(u8"/mb")
+							imgui.NextColumn()
+							imgui.CenterColumnText(u8"Открыть меню списка сотрудников")
+							imgui.NextColumn()
+							imgui.CenterColumnText(u8"Недоступно")
+							imgui.Columns(1)
+							imgui.Separator()
+							imgui.Columns(3)
+							imgui.CenterColumnText(u8"/dep")
+							imgui.NextColumn()
+							imgui.CenterColumnText(u8"Открыть меню рации депортамента")
+							imgui.NextColumn()
+							imgui.CenterColumnText(u8"Недоступно")
+							imgui.Columns(1)
+							imgui.Separator()
+							imgui.Columns(3)
 							imgui.CenterColumnText(u8"/stop")
 							imgui.NextColumn()
 							imgui.CenterColumnText(u8"Остановить отыгровку команды")
@@ -2411,6 +2516,8 @@ imgui.OnFrame(
 									end
 									imgui.End()
 								end
+
+								imgui.CenterText(u8('Настройка биндов под каждую команду доступна только в платной версии 4.0'))
 
 							end
 						imgui.EndChild()
@@ -3403,10 +3510,10 @@ imgui.OnFrame(
 			imgui.End()
 		end
 		imgui.SameLine()
-		if imgui.Button(fa.TAGS .. u8' Тэги (1)', imgui.ImVec2(imgui.GetMiddleButtonX(5), 0)) then
-			imgui.OpenPopup(fa.TAGS .. u8' Основные тэги для использования в биндере')
+		if imgui.Button(fa.TAGS .. u8' Теги', imgui.ImVec2(imgui.GetMiddleButtonX(5), 0)) then
+			imgui.OpenPopup(fa.TAGS .. u8' Теги для использования в биндере')
 		end
-		if imgui.BeginPopupModal(fa.TAGS .. u8' Основные тэги для использования в биндере', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize ) then
+		if imgui.BeginPopupModal(fa.TAGS .. u8' Теги для использования в биндере', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize ) then
 			imgui.Text(u8(binder_tags_text))
 			imgui.Separator()
 			if imgui.Button(fa.CIRCLE_XMARK .. u8' Закрыть', imgui.ImVec2(imgui.GetMiddleButtonX(1), 0)) then
@@ -3415,18 +3522,8 @@ imgui.OnFrame(
 			imgui.End()
 		end
 		imgui.SameLine()
-		if imgui.Button(fa.TAGS .. u8' Тэги (2)', imgui.ImVec2(imgui.GetMiddleButtonX(5), 0)) then
-			imgui.OpenPopup(fa.TAGS .. u8' Дополнительные тэги для взаимодействия с кодом')
-		end
-		if imgui.BeginPopupModal(fa.TAGS .. u8' Дополнительные тэги для взаимодействия с кодом', _, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize  + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.AlwaysAutoResize) then
-			imgui.CenterText(u8'Использовать очень акуратно, иначе можете что-то сломать!')
-			imgui.Separator()
-			imgui.Text(u8(binder_tags_text2))
-			imgui.Separator()
-			if imgui.Button(fa.CIRCLE_XMARK .. u8' Закрыть', imgui.ImVec2(imgui.GetMiddleButtonX(1), 0)) then
-				imgui.CloseCurrentPopup()
-			end
-			imgui.End()
+		if imgui.Button(fa.KEYBOARD .. u8' Бинд (для ПК)', imgui.ImVec2(imgui.GetMiddleButtonX(5), 0)) then
+			sampAddChatMessage('[Hospital Helper] {ffffff}Эта функция доступна только в платной версии 4.0 (покупать у MTG MODS)', -1)
 		end
 		imgui.SameLine()
 		if imgui.Button(fa.FLOPPY_DISK .. u8' Сохранить', imgui.ImVec2(imgui.GetMiddleButtonX(5), 0)) then	
@@ -4167,6 +4264,13 @@ end
 function argbToHexWithoutAlpha(alpha, red, green, blue)
     return string.format("%02X%02X%02X", red, green, blue)
 end
+function rgba_to_hex(rgba)
+    local r = bit.rshift(rgba, 24) % 256
+    local g = bit.rshift(rgba, 16) % 256
+    local b = bit.rshift(rgba, 8) % 256
+    local a = rgba % 256
+    return string.format("%02X%02X%02X", r, g, b)
+end
 function rgba_to_argb(rgba_color)
     -- Получаем компоненты цвета
     local r = bit32.band(bit32.rshift(rgba_color, 24), 0xFF)
@@ -4231,6 +4335,6 @@ function onScriptTerminate(script, game_quit)
 		if not isMonetLoader() then 
 			sampAddChatMessage('[Hospital Helper] {ffffff}Используйте ' .. message_color_hex .. 'CTRL {ffffff}+ ' .. message_color_hex .. 'R {ffffff}чтобы перезапустить хелпер.', message_color)
 		end
-		play_error_sound()
+		
     end
 end
